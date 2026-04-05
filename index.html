@@ -304,7 +304,7 @@ function getSVG(name){
 }
 
 /* ═══ APP VERSION ═══ */
-const APP_VERSION='1.2.0';
+const APP_VERSION='1.3.0';
 const APP_DEPLOYED='5 Apr 2025'; /* Update this string on each deploy */
 
 /* ═══ PHASE DEFINITIONS ═══ */
@@ -2602,6 +2602,43 @@ function saveKey(){
 renderToday();checkBadges();
 /* Show version in footer */
 (function(){const el=document.getElementById('ver-lbl');if(el)el.textContent=`v${APP_VERSION} · deployed ${APP_DEPLOYED}`;})();
+</script>
+<script>
+/* ── Service Worker: auto-update on new deploy ── */
+if('serviceWorker' in navigator){
+  /* Inline service worker as a blob so no extra file is needed */
+  const SW_VERSION='1.3.0'; /* Keep in sync with APP_VERSION above */
+  const swCode=`
+const CACHE='fittrack-v${SW_VERSION}';
+self.addEventListener('install',e=>{
+  self.skipWaiting();
+});
+self.addEventListener('activate',e=>{
+  e.waitUntil(
+    caches.keys().then(keys=>Promise.all(
+      keys.filter(k=>k!==CACHE).map(k=>caches.delete(k))
+    )).then(()=>self.clients.claim())
+  );
+});
+self.addEventListener('fetch',e=>{
+  /* Network-first: always try to get fresh HTML, fall back to cache */
+  if(e.request.mode==='navigate'){
+    e.respondWith(
+      fetch(e.request).then(r=>{
+        const clone=r.clone();
+        caches.open(CACHE).then(c=>c.put(e.request,clone));
+        return r;
+      }).catch(()=>caches.match(e.request))
+    );
+    return;
+  }
+  e.respondWith(fetch(e.request).catch(()=>caches.match(e.request)));
+});
+`;
+  const blob=new Blob([swCode],{type:'application/javascript'});
+  const swUrl=URL.createObjectURL(blob);
+  navigator.serviceWorker.register(swUrl).catch(()=>{});
+}
 </script>
 </body>
 </html>
