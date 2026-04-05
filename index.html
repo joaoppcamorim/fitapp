@@ -225,6 +225,9 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
     <button class="btn btn-s btn-p" id="pt-pantry" onclick="setPantryTabView('pantry')">🥫 Pantry</button>
     <button class="btn btn-s" id="pt-remain" onclick="setPantryTabView('remain')">📊 What remains</button>
     <button class="btn btn-s" id="pt-shop" onclick="setPantryTabView('shop')">🛒 Shop</button>
+    <button class="btn btn-s" onclick="downloadPantryTemplate()" title="Download blank CSV template">⬇ Template</button>
+    <button class="btn btn-s" onclick="exportPantryCsv()" title="Export current pantry to CSV">⬇ Export</button>
+    <label class="btn btn-s" style="cursor:pointer" title="Upload pantry from CSV">⬆ Import<input type="file" accept=".csv" onchange="importPantryCsv(event)" style="display:none"></label>
   </div>
   <div id="pantryTabCont"></div>
   <div id="shopcont" style="display:none"></div>
@@ -301,7 +304,7 @@ function getSVG(name){
 }
 
 /* ═══ APP VERSION ═══ */
-const APP_VERSION='1.0.2';
+const APP_VERSION='1.0.3';
 const APP_DEPLOYED='5 Apr 2025'; /* Update this string on each deploy */
 
 /* ═══ PHASE DEFINITIONS ═══ */
@@ -1353,6 +1356,108 @@ function renderWhatRemains(){
   if(S_pantryView==='remain')cont.innerHTML=html;
 }
 
+/* ── Pantry CSV import / export ── */
+function downloadPantryTemplate(){
+  const rows=[
+    ['name','qty','unit','category'],
+    ['Chicken breast','600','g','fresh'],
+    ['Brown rice','500','g','cupboard'],
+    ['Bananas','5','units','fresh'],
+    ['Greek yogurt','500','g','fresh'],
+    ['Free range eggs','12','units','fresh'],
+    ['Rolled oats','1','kg','cupboard'],
+    ['Salmon fillet','2','units','frozen'],
+    ['Chickpeas','2','can','cupboard'],
+    ['Spinach','200','g','fresh'],
+    ['Harissa paste','3','tbsp','cupboard'],
+  ];
+  const csv=rows.map(r=>r.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(',')).join('\r\n');
+  const blob=new Blob([csv],{type:'text/csv'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download='pantry-template.csv';
+  a.click();
+  URL.revokeObjectURL(a.href);
+  toast('CSV template downloaded');
+}
+
+function exportPantryCsv(){
+  const wo=S.mealWeek||0;
+  const pantry=getPantry(wo);
+  if(!pantry.length){toast('Pantry is empty — nothing to export','warn');return;}
+  const rows=[['name','qty','unit','category']];
+  pantry.forEach(i=>{
+    const name=i.itemName||(i.name||'').replace(/\s*[\d.]+\s*[a-zA-Z]*$/,'').trim()||i.name||'';
+    const qty=i.qty!=null?String(i.qty):'';
+    const unit=i.unit||'units';
+    const cat=i.frozen?'frozen':i.fridge?'fridge':i.perishable?'fresh':'cupboard';
+    rows.push([name,qty,unit,cat]);
+  });
+  const csv=rows.map(r=>r.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(',')).join('\r\n');
+  const blob=new Blob([csv],{type:'text/csv'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  const label=weekLabel(wo).replace(/\s+/g,'-').toLowerCase();
+  a.download=`pantry-${label}.csv`;
+  a.click();
+  URL.revokeObjectURL(a.href);
+  toast(`Exported ${pantry.length} item${pantry.length!==1?'s':''} to CSV`);
+}
+
+function importPantryCsv(e){
+  const file=e.target.files?.[0];if(!file)return;
+  const reader=new FileReader();
+  reader.onload=ev=>{
+    const text=ev.target.result;
+    const lines=text.split(/\r?\n/).filter(l=>l.trim());
+    if(!lines.length){toast('Empty CSV file','warn');return;}
+    /* Detect header row */
+    const firstLower=lines[0].toLowerCase();
+    const hasHeader=firstLower.includes('name')||firstLower.includes('qty')||firstLower.includes('unit')||firstLower.includes('category');
+    const dataLines=hasHeader?lines.slice(1):lines;
+    /* Parse CSV rows — handle quoted fields */
+    function parseCsvRow(row){
+      const result=[];let cur='';let inQ=false;
+      for(let i=0;i<row.length;i++){
+        const ch=row[i];
+        if(ch==='"'){if(inQ&&row[i+1]==='"'){cur+='"';i++;}else{inQ=!inQ;}}
+        else if(ch===','&&!inQ){result.push(cur.trim());cur='';}
+        else{cur+=ch;}
+      }
+      result.push(cur.trim());
+      return result;
+    }
+    const wo=S.mealWeek||0;
+    const p=getPantry(wo);
+    const existing=new Set(p.map(i=>(i.itemName||i.name||'').toLowerCase()));
+    let added=0;let skipped=0;
+    dataLines.forEach(line=>{
+      if(!line.trim())return;
+      const [rawName,rawQty,rawUnit,rawCat]=parseCsvRow(line);
+      const name=(rawName||'').trim();if(!name)return;
+      const qty=rawQty&&rawQty.trim()!==''?parseFloat(rawQty.trim()):null;
+      const unit=(rawUnit||'units').trim().toLowerCase()||'units';
+      const catRaw=(rawCat||'auto').trim().toLowerCase();
+      const validCats=['fresh','frozen','cupboard','fridge','auto'];
+      const cat=validCats.includes(catRaw)?catRaw:'auto';
+      const lname=name.toLowerCase();
+      if(existing.has(lname)){skipped++;return;}
+      existing.add(lname);
+      const perishable=cat==='auto'?isPerishable(name):cat==='fresh';
+      const frozen=cat==='frozen';
+      const fridge=cat==='fridge';
+      const displayName=qty!=null?`${name} ${qty}${unit==='units'?'':unit}`:name;
+      p.push({name:displayName,itemName:name,qty,unit,perishable,frozen,fridge});
+      added++;
+    });
+    setPantry(wo,p);
+    setPantryTabView('pantry');
+    toast(`✓ Imported ${added} item${added!==1?'s':''}${skipped?` (${skipped} duplicate${skipped!==1?'s':''} skipped)`:''}`);
+    e.target.value=''; /* reset file input */
+  };
+  reader.readAsText(file);
+}
+
 /* Pantry view — structured add form, inline category edit */
 const PANTRY_UNITS=['units','g','kg','mg','ml','L','tsp','tbsp','cup','can','pack','bunch','slice','fillet','portion'];
 
@@ -1620,9 +1725,7 @@ async function genMeals(){
   const wo=S.mealWeek||0;
   const ph=getPhase();const p=PH[ph];const cur=getCurW();
   const btn=document.getElementById('genbtn');
-  btn.disabled=true;btn.textContent='Generating…';
-  document.getElementById('mcont').innerHTML=`<div class="ail"><div class="spin"></div><div class="aim">Building meal plan from your pantry…</div></div>`;
-  const isMaint=ph>=4;
+  btn.disabled=true;
 
   /* ── Pantry snapshot ── */
   const _pw=getPantry(wo);
@@ -1632,15 +1735,16 @@ async function genMeals(){
   const _stable=_pw.filter(i=>!i.perishable&&!i.frozen&&!i.fridge);
   const allPantry=[..._fresh,..._fridge,..._froz,..._stable];
   const hasPantry=allPantry.length>0;
+  const isMaint=ph>=4;
 
   const fmtItem=i=>{
     const n=i.itemName||i.name||'';
-    if(i.qty==null) return n;
+    if(i.qty==null)return n;
     const u=i.unit&&i.unit!=='units'?i.unit:'';
     return `${n} — ${i.qty}${u}`;
   };
 
-  /* ── Unit → grams converter (protein estimation) ── */
+  /* ── Unit → grams converter ── */
   function toGrams(qty,unit,name){
     if(qty==null||qty===0)return 300;
     const u=(unit||'').toLowerCase().replace(/s$/,'');
@@ -1668,126 +1772,81 @@ async function genMeals(){
       if(/tofu/i.test(n))return qty*200;
       return qty*150;
     }
-    if(u==='fillet'){
-      if(/salmon/i.test(n))return qty*160;
-      if(/cod/i.test(n))return qty*140;
-      return qty*150;
-    }
-    if(u==='slice'){
-      if(/ham|turkey|beef/i.test(n))return qty*25;
-      return qty*35;
-    }
-    if(u==='can'){
-      if(/tuna/i.test(n))return qty*145;
-      if(/salmon/i.test(n))return qty*213;
-      if(/chicken/i.test(n))return qty*170;
-      return qty*200;
-    }
-    if(u==='pack'){
-      if(/mince|ground/i.test(n))return qty*500;
-      if(/chicken breast/i.test(n))return qty*600;
-      if(/sausage/i.test(n))return qty*400;
-      if(/salmon|fish/i.test(n))return qty*320;
-      return qty*400;
-    }
-    if(u==='tbsp')return qty*15;
-    if(u==='tsp')return qty*5;
-    if(u==='cup')return qty*240;
+    if(u==='fillet'){if(/salmon/i.test(n))return qty*160;if(/cod/i.test(n))return qty*140;return qty*150;}
+    if(u==='slice'){if(/ham|turkey|beef/i.test(n))return qty*25;return qty*35;}
+    if(u==='can'){if(/tuna/i.test(n))return qty*145;if(/salmon/i.test(n))return qty*213;if(/chicken/i.test(n))return qty*170;return qty*200;}
+    if(u==='pack'){if(/mince|ground/i.test(n))return qty*500;if(/chicken breast/i.test(n))return qty*600;if(/sausage/i.test(n))return qty*400;if(/salmon|fish/i.test(n))return qty*320;return qty*400;}
+    if(u==='tbsp')return qty*15;if(u==='tsp')return qty*5;if(u==='cup')return qty*240;
     return qty;
   }
 
-  /* ── Quantity-aware protein analysis ── */
+  /* ── Protein analysis ── */
   const PROTEIN_RE=/chicken|beef|pork|lamb|turkey|mince|steak|fish|salmon|tuna|cod|prawn|shrimp|tofu|tempeh|quorn/i;
   const pantryProteins=allPantry.filter(i=>PROTEIN_RE.test(i.itemName||i.name||''));
   const totalProteinG=pantryProteins.reduce((sum,i)=>sum+toGrams(i.qty,i.unit,i.itemName||i.name||''),0);
   const WEEKLY_PROTEIN_NEED=2100;
   const proteinGap=Math.max(0,WEEKLY_PROTEIN_NEED-totalProteinG);
   const portionsCovered=Math.floor(totalProteinG/150);
-  const portionsNeeded=14;
-  const portionsShort=Math.max(0,portionsNeeded-portionsCovered);
   const proteinSufficient=totalProteinG>=WEEKLY_PROTEIN_NEED*0.8;
 
-  /* ── Classify non-protein pantry items (exclude staples) ── */
-  /* Staples: seasonings, oils, aromatics, vinegars, condiments — never prioritised */
-  const STAPLE_RE=/\b(salt|pepper|chilli flake|dried herb|oregano|thyme|rosemary|bay leaf|cumin|coriander|paprika|turmeric|cinnamon|cayenne|garlic powder|onion powder|olive oil|vegetable oil|sunflower oil|rapeseed oil|coconut oil|vinegar|soy sauce|worcestershire|stock cube|tomato pur|flour|cornflour|baking|bicarbonate|sugar|harissa|miso|tahini|fish sauce|oyster sauce|hoisin|sriracha|gochujang|mirin|sesame oil|coconut milk|coconut cream|preserved lemon|anchovy|truffle|mustard|honey|jam|ketchup|mayo|mayonnaise|hot sauce|chilli sauce|lemon|lime|garlic(?! bread| naan)|onion|shallot|ginger|chilli|chili)\b/i;
-
-  const isStaple=i=>{
-    const n=(i.itemName||i.name||'').toLowerCase();
-    return STAPLE_RE.test(n);
-  };
-
-  /* Categorise non-protein, non-staple pantry items */
-  const VEG_RE   =/broccoli|spinach|kale|pepper|courgette|zucchini|carrot|sweet potato|potato|cauliflower|cabbage|lettuce|rocket|tomato|cucumber|celery|leek|mushroom|aubergine|eggplant|beetroot|asparagus|green bean|pea|corn|avocado|butternut|squash|fennel|artichoke|pak choi|bok choy/i;
-  const GRAIN_RE =/rice|pasta|oat|bread|tortilla|wrap|bagel|pitta|noodle|quinoa|couscous|bulgur|farro|barley|lentil|chickpea|kidney bean|black bean|cannellini|butter bean|baked bean|cereal|granola/i;
-  const DAIRY_RE =/yogurt|yoghurt|milk|cream|cheese|feta|parmesan|halloumi|ricotta|mozzarella|cheddar|butter|egg/i;
-  const FRUIT_RE =/banana|apple|berry|berries|blueberr|strawberr|raspberr|mango|grape|orange|pear|peach|plum|melon|pineapple|kiwi|cherry/i;
-
-  const nonProteinPriority=allPantry.filter(i=>
-    !PROTEIN_RE.test(i.itemName||i.name||'') &&
-    !isStaple(i)
-  );
-
-  const vegItems   =nonProteinPriority.filter(i=>VEG_RE.test(i.itemName||i.name||''));
-  const grainItems =nonProteinPriority.filter(i=>GRAIN_RE.test(i.itemName||i.name||''));
-  const dairyItems =nonProteinPriority.filter(i=>DAIRY_RE.test(i.itemName||i.name||''));
-  const fruitItems =nonProteinPriority.filter(i=>FRUIT_RE.test(i.itemName||i.name||''));
-  const otherItems =nonProteinPriority.filter(i=>
-    !VEG_RE.test(i.itemName||i.name||'') &&
-    !GRAIN_RE.test(i.itemName||i.name||'') &&
-    !DAIRY_RE.test(i.itemName||i.name||'') &&
-    !FRUIT_RE.test(i.itemName||i.name||'')
-  );
+  /* ── Non-protein ingredient classification ── */
+  const STAPLE_RE=/\b(salt|pepper|chilli flake|oregano|thyme|rosemary|bay|cumin|coriander|paprika|turmeric|cinnamon|cayenne|garlic powder|onion powder|olive oil|vegetable oil|sunflower oil|vinegar|soy sauce|worcestershire|stock cube|tomato pur|flour|cornflour|baking|bicarbonate|sugar|harissa|miso|tahini|fish sauce|oyster sauce|hoisin|sriracha|gochujang|mirin|sesame oil|coconut milk|coconut cream|preserved lemon|anchovy|truffle|mustard|honey|jam|ketchup|mayo|hot sauce|chilli sauce|lemon|lime|garlic(?! bread| naan)|onion|shallot|ginger|chilli|chili)\b/i;
+  const isStaple=i=>STAPLE_RE.test((i.itemName||i.name||'').toLowerCase());
+  const VEG_RE=/broccoli|spinach|kale|pepper|courgette|carrot|sweet potato|potato|cauliflower|cabbage|lettuce|rocket|tomato|cucumber|celery|leek|mushroom|aubergine|beetroot|asparagus|green bean|pea|corn|avocado|butternut|squash|fennel|pak choi/i;
+  const GRAIN_RE=/rice|pasta|oat|bread|tortilla|wrap|bagel|pitta|noodle|quinoa|couscous|bulgur|lentil|chickpea|kidney bean|black bean|cannellini|butter bean|baked bean|cereal|granola/i;
+  const DAIRY_RE=/yogurt|yoghurt|milk|cream|cheese|feta|parmesan|halloumi|ricotta|mozzarella|cheddar|butter|egg/i;
+  const FRUIT_RE=/banana|apple|berry|berries|blueberr|strawberr|raspberr|mango|grape|orange|pear|peach|plum|melon|pineapple|kiwi|cherry/i;
+  const nonProteinPriority=allPantry.filter(i=>!PROTEIN_RE.test(i.itemName||i.name||'')&&!isStaple(i));
+  const vegItems=nonProteinPriority.filter(i=>VEG_RE.test(i.itemName||i.name||''));
+  const grainItems=nonProteinPriority.filter(i=>GRAIN_RE.test(i.itemName||i.name||''));
+  const dairyItems=nonProteinPriority.filter(i=>DAIRY_RE.test(i.itemName||i.name||''));
+  const fruitItems=nonProteinPriority.filter(i=>FRUIT_RE.test(i.itemName||i.name||''));
+  const otherItems=nonProteinPriority.filter(i=>!VEG_RE.test(i.itemName||i.name||'')&&!GRAIN_RE.test(i.itemName||i.name||'')&&!DAIRY_RE.test(i.itemName||i.name||'')&&!FRUIT_RE.test(i.itemName||i.name||''));
 
   const ingredientGuidance=[
-    vegItems.length   ? `VEGETABLES / PRODUCE (use across multiple meals — sides, roasted, salads, soups, sauces):\n${vegItems.map(fmtItem).map(x=>`  * ${x}`).join('\n')}` : '',
-    grainItems.length ? `GRAINS, CARBS & LEGUMES (build meals around these — rice bowls, wraps, pasta, grain bowls):\n${grainItems.map(fmtItem).map(x=>`  * ${x}`).join('\n')}` : '',
-    dairyItems.length ? `DAIRY & EGGS (breakfast, sauces, toppings, baking):\n${dairyItems.map(fmtItem).map(x=>`  * ${x}`).join('\n')}` : '',
-    fruitItems.length ? `FRUIT (breakfast, snacks, pre-workout smoothies):\n${fruitItems.map(fmtItem).map(x=>`  * ${x}`).join('\n')}` : '',
-    otherItems.length ? `OTHER PANTRY ITEMS (use where suitable):\n${otherItems.map(fmtItem).map(x=>`  * ${x}`).join('\n')}` : '',
+    vegItems.length?`VEGETABLES (use across multiple meals):\n${vegItems.map(fmtItem).map(x=>`  * ${x}`).join('\n')}`:'',
+    grainItems.length?`GRAINS & LEGUMES (build meals around these):\n${grainItems.map(fmtItem).map(x=>`  * ${x}`).join('\n')}`:'',
+    dairyItems.length?`DAIRY & EGGS:\n${dairyItems.map(fmtItem).map(x=>`  * ${x}`).join('\n')}`:'',
+    fruitItems.length?`FRUIT:\n${fruitItems.map(fmtItem).map(x=>`  * ${x}`).join('\n')}`:'',
+    otherItems.length?`OTHER:\n${otherItems.map(fmtItem).map(x=>`  * ${x}`).join('\n')}`:'',
   ].filter(Boolean).join('\n');
 
-  /* Build the protein guidance block */
   let proteinGuidance='';
   if(pantryProteins.length===0){
-    proteinGuidance=`\nNo proteins in pantry — choose appropriate proteins freely and add them to the shopping list.\n`;
+    proteinGuidance='No proteins in pantry — choose proteins freely and add to shopping list.\n';
   } else if(proteinSufficient){
-    proteinGuidance=`PROTEINS (${Math.round(totalProteinG)}g total — sufficient for the full week, ~${portionsCovered} portions). Use ONLY these. Do NOT introduce other meats or fish:\n${pantryProteins.map(fmtItem).map(x=>`  * ${x}`).join('\n')}\n`;
+    proteinGuidance=`PROTEINS (${Math.round(totalProteinG)}g — sufficient for full week, ~${portionsCovered} portions). Use ONLY these:\n${pantryProteins.map(fmtItem).map(x=>`  * ${x}`).join('\n')}\n`;
   } else {
-    proteinGuidance=`PROTEINS (${Math.round(totalProteinG)}g total — covers ~${portionsCovered} of ${portionsNeeded} needed portions. Need ~${Math.round(proteinGap)}g more):\n${pantryProteins.map(fmtItem).map(x=>`  * ${x}`).join('\n')}\nSUPPLEMENT: Add ~${Math.round(proteinGap)}g of ONE complementary protein to complete the week. Add it to the shopping list.\n`;
+    proteinGuidance=`PROTEINS (${Math.round(totalProteinG)}g — covers ~${portionsCovered}/14 portions needed, ~${Math.round(proteinGap)}g short):\n${pantryProteins.map(fmtItem).map(x=>`  * ${x}`).join('\n')}\nSUPPLEMENT: Add ~${Math.round(proteinGap)}g of ONE complementary protein. Add to shopping list.\n`;
   }
 
-  /* Build the full pantry block */
   const pantryBlock=hasPantry?`
 =====================================================================
-PANTRY INVENTORY — BUILD THE MEAL PLAN FROM THESE ITEMS FIRST
+PANTRY — BUILD THE MEAL PLAN FROM THESE ITEMS FIRST
 =====================================================================
 ${proteinGuidance}
 ${ingredientGuidance}
-RULES FOR PANTRY ITEMS:
-* Every item listed above must appear in at least one meal this week.
-* Non-staple ingredients above take priority — do not buy duplicates of what is already owned.
-* Only buy supplementary items needed to complete macros or fill genuine gaps.
-* Staples (seasonings, oils, garlic, lemons, vinegars, specialty sauces, aromatics) are excluded from this list — they are assumed always available.
+* Every item above must appear in at least one meal.
+* Do not buy duplicates of what is already in the pantry.
+* Only buy extra items to complete macros or fill genuine gaps.
 =====================================================================
-`:`\nPantry is empty — plan freely and add everything to the shopping list.\n`;
+`:'(Pantry empty — plan freely.)\n';
 
-  /* Perishable allocation pre-step — all fresh items, excluding staples */
   const freshNonStaple=_fresh.filter(i=>!isStaple(i));
   const freshUsageBlock=freshNonStaple.length?`
-PRE-PLAN STEP — allocate every fresh item to specific meals BEFORE writing any day:
+BEFORE WRITING ANY MEALS — allocate every fresh item to a named meal on a named day:
 ${freshNonStaple.map(fmtItem).map(x=>`  * ${x}`).join('\n')}
-* Proteins/fish → name which lunch/dinner each gram appears in
-* Vegetables    → spread across multiple meals (sides, roasted, salads, sauces)
-* Fruit         → breakfast, snacks, pre-workout
-* Bread/wraps/tortillas/bagels/pitta → every piece to a named meal on a named day
-* Dairy/eggs    → breakfast, sauces, toppings
-NO meal may be written until every item above is fully allocated.
 `:'';
 
   const _favs=getFavourites().slice(-20);
-  const favsStr=_favs.length?`\nFAVOURITES (weave in where macros allow):\n${_favs.map(f=>f.name).join(', ')}`:'';
+  const favsStr=_favs.length?`\nFAVOURITES:\n${_favs.map(f=>f.name).join(', ')}`:'';
 
-  const prompt=`You are a professional chef and sports nutritionist inspired by NYT Cooking, Molly Baz, Alison Roman, Yotam Ottolenghi. Create a 7-day meal plan:
+  /* ══════════════════════════════════════════════════════════════
+     PHASE 1 — Plan only (no steps). Small response, fits easily.
+     ══════════════════════════════════════════════════════════════ */
+  document.getElementById('mcont').innerHTML=`<div class="ail"><div class="spin"></div><div class="aim">Step 1/2 — Building meal plan from pantry…</div></div>`;
+
+  const planPrompt=`You are a professional chef and sports nutritionist (NYT Cooking / Molly Baz / Alison Roman style). Create a 7-day meal plan:
 - 37yo male, 183cm, ${cur.toFixed(1)}kg, started 98kg, goal 70kg
 - Phase ${ph}: ${p.label} — ${p.goal}. ${p.note}
 - Calories: Training days (Mon/Wed/Fri) ${p.tKcal}kcal P${p.tP}g C${p.tC}g F${p.tF}g | Rest days ${p.rKcal}kcal P${p.rP}g C${p.rC}g F${p.rF}g
@@ -1795,81 +1854,111 @@ NO meal may be written until every item above is fully allocated.
 ${pantryBlock}${freshUsageBlock}${favsStr}
 
 RULES:
-1. PANTRY FIRST — QUANTITY AWARE: Use pantry proteins and major ingredients first. If pantry proteins cover the full week (see PROTEIN COVERAGE above), do not introduce other proteins. If insufficient, use all pantry proteins first then add ONE complementary protein for the remaining meals and add it to the shopping list. Never introduce random proteins that don't complement what is already in the pantry.
+1. PANTRY FIRST: Use ONLY pantry proteins unless insufficient (see above). Use all pantry veg/grains/dairy. Only buy extras to fill gaps.
+2. REPEAT MEALS OK: Same meal on multiple days is good for batch efficiency.
+3. ZERO WASTE — FRESH: Every fresh item fully consumed. No remainder <120g.
+4. ZERO WASTE — BREAD/WRAPS: Every piece assigned to a specific meal and day.
+5. BATCH ON SUNDAY: All meat batch-cooked Sunday. Weekday meals say "from Sunday batch".
+6. LUNCH = ASSEMBLY ONLY ≤5 min: From pre-cooked components. Label "(assembly only)".
+7. DINNER ≤45 min. Label time.
+8. BREAKFAST/SNACKS/PRE-WORKOUT ≤10 min. No weekday morning cooking.
+9. FULL DETAIL: Every meal lists ALL ingredients with exact quantities and seasonings including specialty items (harissa, tahini, cheese, fresh herbs, butter, honey etc.).
+10. CHEF QUALITY: Name dishes like NYT Cooking. E.g. "Harissa chicken thigh rice bowl", "Crispy chickpeas with feta".
+11. PANTRY AFTER: For every pantry item, state remaining quantity after the week. Fresh remainder → freeze:true.
+12. SUNDAY PREP: One task per distinct preparation. Every batch item in any weekday meal must have its own prep task. Include freeze tasks for remaining perishables.
 
-2. MEALS MAY REPEAT: The same meal may appear on multiple days — this is intentional and desirable. Repeating meals across 2–4 days is the best way to use up perishables and batch-cooked components efficiently. Do not force variety for its own sake.
+Return ONLY valid JSON — NO steps[] yet, those come in a second pass:
+{"Sunday":{"type":"rest","rest":[{"time":"Breakfast","name":"...","detail":"exact ingredients + quantities + seasonings","calories":0,"protein":0,"carbs":0,"fat":0},{"time":"Mid-morning","name":"...","detail":"...","calories":0,"protein":0,"carbs":0,"fat":0},{"time":"Lunch","name":"...","detail":"...","calories":0,"protein":0,"carbs":0,"fat":0},{"time":"Snack","name":"...","detail":"...","calories":0,"protein":0,"carbs":0,"fat":0},{"time":"Dinner","name":"...","detail":"...","calories":0,"protein":0,"carbs":0,"fat":0}]},"Monday":{"type":"training","training":[{"time":"Breakfast","name":"...","detail":"...","calories":0,"protein":0,"carbs":0,"fat":0},{"time":"Mid-morning","name":"...","detail":"...","calories":0,"protein":0,"carbs":0,"fat":0},{"time":"Pre-workout","name":"...","detail":"...","calories":0,"protein":0,"carbs":0,"fat":0},{"time":"Lunch","name":"...","detail":"...","calories":0,"protein":0,"carbs":0,"fat":0},{"time":"Dinner","name":"...","detail":"...","calories":0,"protein":0,"carbs":0,"fat":0}]},"Tuesday":{"type":"rest","rest":[...]},"Wednesday":{"type":"training","training":[...]},"Thursday":{"type":"rest","rest":[...]},"Friday":{"type":"training","training":[...]},"Saturday":{"type":"rest","rest":[...]},"_sundayPrep":[{"task":"Harissa chicken thighs","note":"Yields 4×180g. Used Mon/Wed/Fri lunches. Keep 4 days fridge.","steps":["Preheat oven 200°C fan.","Mix 3 tbsp (45g) harissa, 2 tbsp (30ml) olive oil, 1 tsp cumin, ½ tsp salt.","Coat 720g chicken thighs. Marinate 15 min.","Roast 25 min until 75°C internal. Rest 5 min.","Divide into 4×180g portions. Refrigerate in labelled containers."]}],"_pantryAfter":[{"name":"Chicken thighs","remaining":"0g","freeze":false,"note":"Used 180g Mon/Wed/Fri lunch + Tue dinner"},{"name":"Bananas","remaining":"1","freeze":false,"note":"5 used across week, 1 remaining"}]}`;
 
-3. ZERO WASTE — FRESH PRODUCE: Every fresh/perishable pantry item must be fully consumed. Quantities in meal details must sum to the pantry quantity. No remainder below 120g — use it all in one meal.
-
-4. ZERO WASTE — BREAD/WRAPS: Every slice, wrap, tortilla, bagel and pitta assigned to a specific meal on a specific day. 100% consumed.
-
-5. BATCH COOKING ON SUNDAY: All meat and fish are batch-cooked Sunday. Weekday meals reference them as "from Sunday batch". Each batch item has its OWN Sunday prep task. Design the week so the same batch protein appears in multiple lunches and dinners.
-
-6. MICROWAVE-FRIENDLY BATCH MEALS: Every meal using Sunday-prepped components reheats in the microwave only — no hob or oven needed. Label detail "(microwave 2 min)" or "(microwave 2–3 min, stir halfway)".
-
-7. LUNCHES — QUICK ASSEMBLY ≤5 MIN: Lunches are assembled entirely from pre-cooked batch components. No lunch-time cooking whatsoever. Think grain bowls, batch-protein wraps, lentil bowls, cold noodle salads. Label "(assembly only, 3–5 min)".
-
-8. DINNERS — MAX 30–45 MIN ACTIVE COOK: Dinners not made from batch components must be achievable in 30–45 min active cooking time. Batch-reheated dinners are assembly + microwave only. Include estimated time in the meal name: e.g. "Pan-seared salmon with roasted courgette (~30 min)".
-
-9. BREAKFAST / SNACKS / PRE-WORKOUT — MAX 10 MIN: Weekday breakfasts are overnight oats (assembled the night before), yogurt bowls, toast, or protein shakes. No weekday morning cooking. Batch-boil eggs on Sunday if used. Snacks and pre-workout meals are grab-and-go: a piece of fruit, rice cakes, a shake, a yogurt.
-
-10. CHEF-QUALITY DISHES inspired by NYT Cooking, Bon Appétit, Molly Baz, Alison Roman, Yotam Ottolenghi: Name and design dishes with character. Examples: "Alison Roman-style crispy chickpeas with feta and herbs", "Spiced lentil and roasted carrot bowl with tahini drizzle", "Harissa-roasted chicken thigh rice bowl", "Ottolenghi-inspired roasted aubergine with yogurt and pomegranate". Every dish should sound like something from a great recipe site.
-
-11. FULL INGREDIENT DETAIL: Every meal's "detail" field lists ALL ingredients with exact quantities including every seasoning, oil and condiment (e.g. "200g chicken thighs, 2 tbsp harissa paste, 1 tbsp olive oil, 1 tsp ground cumin, ½ tsp smoked paprika, juice of ½ lemon, 1 clove garlic minced, salt and black pepper").
-
-12. SPECIALTY ITEMS in meal detail (never assumed in stock): harissa, miso, tahini, sesame oil, coconut milk, any cheese, butter, honey, Dijon mustard, fresh ginger, fresh chillies, fresh herbs, preserved lemons, fish sauce, hoisin, sriracha, any spice blend, olives, capers, sundried tomatoes, yogurt. These must appear so the shopping list picks them up.
-
-13. STEP-BY-STEP RECIPES — steps[] on every meal. Recipes must be comprehensive and follow the standard of NYT Cooking or a professional recipe book:
-    - 4–7 steps per cooked meal, 2–3 steps for assembly/no-cook meals
-    - EVERY step must include the EXACT quantity of EVERY ingredient used in that step — including water volumes ("add 600ml cold water"), stock volumes ("pour in 400ml hot chicken stock"), oil amounts ("heat 2 tbsp (30ml) olive oil"), spice amounts ("add 1 tsp smoked paprika, ½ tsp ground cumin, ¼ tsp cayenne"), garlic ("3 cloves, finely minced"), lemon ("juice of 1 lemon, approximately 30ml")
-    - When portioning: always state exact weight or volume per portion (e.g. "divide into 4 equal portions of approximately 175g each")
-    - Include visual doneness cues: "until golden and fragrant, about 2 min", "until juices run clear and internal temp reaches 75°C", "until the lentils are completely soft and the mixture is thick enough to coat a spoon"
-    - Include technique detail: "over medium-high heat", "stirring frequently", "without stirring for the first 3 min to develop a crust", "reduce heat to the lowest setting and cover tightly"
-    - For batch/assembly meals: step 1 always describes the reheating method with exact time and power level
-
-14. SUNDAY PREP — one task per distinct preparation. MANDATORY TASKS:
-    - Every protein/grain/veg/sauce used in any weekday meal as "batch" or "Sunday batch" must have its own prep task
-    - Freeze tasks for every perishable with remaining quantity
-    Step rules: exact quantities for ALL ingredients at every step including water, stock, oil, every spice; exact portion weights; °C + minutes + visual doneness cue.
-
-15. PANTRY AFTER: Every pantry item with "remaining" as plain quantity ("200g","3","0"). Fresh remainder → freeze:true. Note which specific meals used how much.
-
-16. STAPLES: Do not list true staples (salt, pepper, basic dried/ground spices, olive oil, vinegars, flour, sugar, soy sauce, stock cubes, tomato purée) in meal detail — they are handled by the shopping list generator. DO include all quantities of these in the steps[] so the full recipe is accurate.
-
-Return ONLY valid JSON (no markdown, no code fences):
-{"Sunday":{"type":"rest","rest":[{"time":"Breakfast","name":"Crispy fried egg and avocado toast (~8 min)","detail":"2 large eggs, 2 slices sourdough bread, 1 ripe avocado, ½ tsp chilli flakes, juice of ½ lemon, flaky salt","calories":480,"protein":22,"carbs":40,"fat":26,"steps":["Heat 1 tbsp (15ml) olive oil in a non-stick frying pan over medium-high heat until shimmering.","Crack 2 large eggs directly into the pan. Season immediately with a pinch of salt and a grind of black pepper. Fry undisturbed for 2–3 min until the whites are fully set and the edges are golden and lacy.","Meanwhile, toast 2 slices of sourdough until deep golden. Halve 1 ripe avocado, remove the stone, and scoop the flesh into a small bowl.","Mash the avocado with the juice of ½ lemon (approx 15ml), ½ tsp chilli flakes and ¼ tsp flaky salt until roughly smooth.","Spread the mashed avocado evenly over both toast slices. Slide one fried egg onto each slice. Finish with another pinch of flaky salt and serve immediately."]}]},"Monday":{"type":"training","training":[{"time":"Breakfast","name":"Overnight oats with blueberries (prep night before, 2 min morning)","detail":"50g rolled oats, 180ml semi-skimmed milk, 1 tbsp chia seeds, 80g blueberries, 1 tbsp honey","calories":380,"protein":14,"carbs":60,"fat":7,"steps":["The night before: add 50g rolled oats, 180ml semi-skimmed milk and 1 tbsp chia seeds to a jar or lidded container. Stir thoroughly to combine.","Cover and refrigerate for at least 6 hours or overnight.","In the morning: remove from fridge, top with 80g blueberries and drizzle over 1 tbsp honey. Eat cold straight from the jar."]},{"time":"Pre-workout","name":"Banana and whey protein shake (2 min)","detail":"1 banana (~120g), 30g vanilla whey protein powder, 250ml semi-skimmed milk","calories":300,"protein":28,"carbs":36,"fat":5,"steps":["Peel 1 banana and break into 3–4 chunks. Add to a blender with 30g whey protein powder and 250ml cold semi-skimmed milk.","Blend on high for 20–25 seconds until completely smooth. Drink immediately."]},{"time":"Lunch","name":"Sunday-batch harissa chicken rice bowl (assembly only, 3 min)","detail":"180g Sunday-batch harissa chicken thighs (microwave 2 min), 150g Sunday-batch brown rice (microwave 1 min), 80g Sunday-batch roasted red peppers, 1 tbsp tahini, 1 tsp lemon juice, handful rocket (20g)","calories":540,"protein":48,"carbs":50,"fat":12,"steps":["Place 180g batch chicken in a microwave-safe dish, cover loosely with a damp piece of kitchen paper. Microwave on high for 2 min until piping hot throughout.","Place 150g batch brown rice in a separate microwave-safe bowl. Add 1 tsp water, cover and microwave on high for 1 min. Fluff with a fork.","Spoon the rice into a bowl and top with the hot chicken and 80g roasted red peppers.","Mix 1 tbsp tahini with 1 tsp lemon juice and 2 tsp water to loosen into a drizzleable sauce. Pour over the bowl.","Add a handful of rocket (approx 20g) and serve immediately."]}]},"Tuesday":{"type":"rest","rest":[...]},"Wednesday":{"type":"training","training":[...]},"Thursday":{"type":"rest","rest":[...]},"Friday":{"type":"training","training":[...]},"Saturday":{"type":"rest","rest":[...]},"_sundayPrep":[{"task":"Harissa-marinated chicken thighs","note":"Yields 4×180g cooked portions (720g total). Used Mon/Wed/Fri lunches and Tue dinner. Keeps 4 days refrigerated.","steps":["Preheat oven to 200°C fan / 220°C conventional.","In a large bowl combine 3 tbsp (45g) harissa paste, 2 tbsp (30ml) olive oil, 1 tsp ground cumin, 1 tsp garlic powder, ½ tsp smoked paprika and ½ tsp fine salt. Mix until a smooth marinade forms.","Add 720g boneless skinless chicken thighs and turn to coat every surface evenly. Leave to marinate at room temperature for 15 min (or refrigerate up to 24 hours for deeper flavour).","Arrange in a single layer on a large baking tray lined with foil. Roast for 25–28 min until the edges are charred, the skin is sticky and an instant-read thermometer inserted into the thickest part reads 75°C.","Remove from the oven and rest for 5 min. Slice each thigh into thick strips and divide into 4 equal portions of approximately 180g each.","Transfer each 180g portion into a labelled airtight container. Refrigerate immediately. Use within 4 days or freeze for up to 3 months."]}],"_pantryAfter":[{"name":"Chicken thighs 800g","remaining":"0g","freeze":false,"note":"Used 180g Mon lunch, 180g Wed lunch, 180g Fri lunch, 180g Tue dinner"},{"name":"Bananas 6","remaining":"1","freeze":false,"note":"1 Mon pre-workout, 1 Wed pre-workout, 1 Fri pre-workout, 1 Tue snack, 1 Thu snack. 1 remaining."}]}`;
-
+  let newPlan;
   try{
-    const raw=await apiCall([{role:'user',content:prompt}],16000);
-    let newPlan;
-    try{newPlan=JSON.parse(raw.replace(/```json\n?|```/g,'').trim());}
-    catch(parseErr){
-      /* JSON truncated — try recovering a partial plan by finding the last valid closing */
-      const attempt=raw.replace(/```json\n?|```/g,'').trim();
-      console.error('Parse error in genMeals, raw length:',attempt.length,'chars. First 200:',attempt.slice(0,200));
-      toast('Meal plan JSON was truncated — try regenerating','warn');
-      btn.disabled=false;btn.textContent='✦ Generate this week\'s meal plan';
-      return;
+    btn.textContent='Generating plan…';
+    const raw1=await apiCall([{role:'user',content:planPrompt}],6000);
+    try{newPlan=JSON.parse(raw1.replace(/```json\n?|```/g,'').trim());}
+    catch(e){
+      console.error('Phase 1 parse error. Response length:',raw1.length,'First 300:',raw1.slice(0,300));
+      toast('Could not parse meal plan — try regenerating','warn');
+      btn.disabled=false;btn.textContent='✦ Generate this week\'s meal plan';return;
     }
-    setMealPlan(wo,newPlan);
-    award('meal');
-    /* Refresh pantry tab "what remains" immediately */
-    if(document.getElementById('s-pantrytab')?.classList.contains('on')){
-      setPantryTabView(S_pantryView);
-    }
-    toast(`✦ ${weekLabel(wo)} meal plan ready!`);
-    genShop(true,wo);
   }catch(e){
     if(e.message==='NO_KEY'){btn.disabled=false;btn.textContent='✦ Generate this week\'s meal plan';return;}
     setMealPlan(wo,fbMeals(ph));toast('Using built-in meal plan','warn');
+    renderMeals();btn.disabled=false;btn.textContent='✦ Generate this week\'s meal plan';return;
   }
+
+  /* Save plan immediately so user can see it while recipes generate */
+  setMealPlan(wo,newPlan);
   renderMeals();
-  /* Always refresh what-remains cache regardless of current screen */
-  try{renderWhatRemains&&renderWhatRemains();}catch(_){}
+  renderWhatRemains();
+  award('meal');
+  toast(`✦ Plan ready! Adding recipes…`);
+  genShop(true,wo);
+
+  /* ══════════════════════════════════════════════════════════════
+     PHASE 2 — Generate steps for every meal in one batch call
+     ══════════════════════════════════════════════════════════════ */
+  document.getElementById('mcont').innerHTML=`<div class="ail"><div class="spin"></div><div class="aim">Step 2/2 — Writing step-by-step recipes…</div></div>`;
+  btn.textContent='Adding recipes…';
+
+  try{
+    /* Collect all meals needing steps */
+    const toEnrich=[];
+    DAY_NAMES.forEach(day=>{
+      const dp=newPlan[day];if(!dp)return;
+      (dp.training||dp.rest||[]).forEach((m,idx)=>{
+        if(!m.steps||!m.steps.length)toEnrich.push({day,idx,name:m.name,detail:m.detail});
+      });
+    });
+
+    if(toEnrich.length){
+      const mealList=toEnrich.map(m=>`${m.day} — ${m.name}: ${m.detail}`).join('\n');
+      const stepsPrompt=`Write step-by-step recipes for each meal below in the style of NYT Cooking, Molly Baz, Alison Roman.
+
+STEP RULES — every step must:
+- Include EXACT quantities for EVERY ingredient at that step, including water ("add 600ml cold water"), stock ("pour in 400ml hot chicken stock"), oil ("heat 2 tbsp (30ml) olive oil"), each spice ("add 1 tsp smoked paprika, ½ tsp ground cumin"), garlic ("3 cloves, finely minced"), lemon ("juice of 1 lemon, approx 30ml")
+- For portioning: exact weight per portion ("divide into 4×180g portions")
+- Temperature °C + time in minutes + visual doneness cue for every cooking step
+- 4–6 steps for cooked meals, 2–3 steps for assembly/no-cook meals
+- Batch/microwave meals: step 1 describes reheat method with exact time
+
+Meals:
+${mealList}
+
+Return ONLY a JSON array in the same order as the meals above:
+[{"steps":["Heat 2 tbsp (30ml) olive oil in a non-stick pan over medium-high heat.","Add 200g chicken breast, season with ½ tsp salt and ¼ tsp black pepper. Cook 4–5 min each side until golden and internal temp reaches 75°C.","Rest 3 min before slicing."]},{"steps":["..."]}]`;
+
+      const raw2=await apiCall([{role:'user',content:stepsPrompt}],8000);
+      let recipes;
+      try{recipes=JSON.parse(raw2.replace(/```json\n?|```/g,'').trim());}
+      catch(e){console.error('Phase 2 parse error');recipes=null;}
+
+      if(recipes&&Array.isArray(recipes)){
+        const plan2=getMealPlan(wo);
+        if(plan2){
+          toEnrich.forEach((ref,i)=>{
+            const r=recipes[i];if(!r||!r.steps)return;
+            const dp=plan2[ref.day];if(!dp)return;
+            const meals=dp.training||dp.rest||[];
+            if(meals[ref.idx])meals[ref.idx].steps=r.steps;
+          });
+          setMealPlan(wo,plan2);
+          renderMeals();
+          toast(`✦ ${weekLabel(wo)} meal plan with recipes ready!`);
+        }
+      } else {
+        toast(`✦ ${weekLabel(wo)} meal plan ready! (recipes unavailable — tap "+ Add recipe" on any meal)`);
+      }
+    } else {
+      toast(`✦ ${weekLabel(wo)} meal plan ready!`);
+    }
+  }catch(e){
+    console.error('Phase 2 error:',e);
+    toast(`✦ Plan ready! Tap "+ Add recipe" to add step-by-step recipes.`);
+  }
+
   btn.disabled=false;btn.textContent='✦ Generate this week\'s meal plan';
   });
 }
-
 
 
 async function genSundayPrep(wo){
