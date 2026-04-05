@@ -301,7 +301,7 @@ function getSVG(name){
 }
 
 /* ═══ APP VERSION ═══ */
-const APP_VERSION='1.0.1';
+const APP_VERSION='1.0.2';
 const APP_DEPLOYED='5 Apr 2025'; /* Update this string on each deploy */
 
 /* ═══ PHASE DEFINITIONS ═══ */
@@ -1312,17 +1312,20 @@ function setPantryTabView(v){
 }
 
 function renderWhatRemains(){
-  /* Works whether pantry tab is visible or not — always updates pantryTabCont if available */
   const wo=S.mealWeek||0;
   const _plan=getMealPlan(wo);
   const cont=document.getElementById('pantryTabCont');
   if(!cont)return;
+
   if(!_plan||!_plan._pantryAfter||!_plan._pantryAfter.length){
-    if(S_pantryView==='remain') cont.innerHTML=`<div class="card" style="font-size:13px;color:var(--mt);line-height:1.6">
-      No meal plan generated yet for ${weekLabel(wo)}. Generate a meal plan and expected remaining quantities will appear here.
+    const emptyHtml=`<div class="card" style="font-size:13px;color:var(--mt);line-height:1.6">
+      No meal plan generated yet for ${weekLabel(wo)}. Generate a meal plan and the expected remaining quantities will appear here.
     </div>`;
+    window._whatRemainsHtml=emptyHtml;
+    if(S_pantryView==='remain')cont.innerHTML=emptyHtml;
     return;
   }
+
   const consumed=[];const remaining=[];const toFreeze=[];
   _plan._pantryAfter.forEach(pa=>{
     const rem=String(pa.remaining||'').trim();
@@ -1332,6 +1335,7 @@ function renderWhatRemains(){
     else if(pa.freeze)toFreeze.push({name:baseName,qty:rem,note:pa.note||''});
     else remaining.push({name:baseName,qty:rem,note:pa.note||''});
   });
+
   let html=`<div class="card" style="font-size:13px;color:var(--mt);line-height:1.6;margin-bottom:12px">
     Expected pantry state at end of <strong>${weekLabel(wo)}</strong> if the meal plan is fully followed.
     <button onclick="applyPantryAfter()" class="btn btn-p btn-f" style="margin-top:8px;background:var(--g)">✓ Apply pantry changes after cooking</button>
@@ -1343,10 +1347,10 @@ function renderWhatRemains(){
   if(remaining.length){html+=`<div style="font-size:11px;font-weight:600;color:var(--mt);letter-spacing:.06em;text-transform:uppercase;margin:12px 0 6px">Remaining in pantry (${remaining.length})</div><div class="card" style="padding:0 12px">`;remaining.forEach(r=>{html+=remRow(r,'var(--tx)');});html+='</div>';}
   if(toFreeze.length){html+=`<div style="font-size:11px;font-weight:600;color:var(--bd);letter-spacing:.06em;text-transform:uppercase;margin:12px 0 6px">❄ Freeze before end of week (${toFreeze.length})</div><div style="background:var(--bl);border-radius:var(--r);padding:0 12px">`;toFreeze.forEach(r=>{html+=remRow(r,'var(--bd)');});html+='</div>';}
   if(consumed.length){html+=`<div style="font-size:11px;font-weight:600;color:var(--g);letter-spacing:.06em;text-transform:uppercase;margin:12px 0 6px">✓ Fully consumed (${consumed.length})</div><div class="card" style="padding:0 12px">`;consumed.forEach(r=>{html+=`<div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:.5px solid var(--br)"><span style="flex:1;font-size:14px;color:var(--mt);text-decoration:line-through">${r.name}</span><span style="font-size:12px;color:var(--g);font-weight:600">all used ✓</span></div>`;});html+='</div>';}
-  /* Only inject into DOM if "what remains" tab is currently selected */
-  if(S_pantryView==='remain') cont.innerHTML=html;
-  /* Cache the HTML so switching to the tab shows it instantly */
+
+  /* Always cache — regardless of which tab is active */
   window._whatRemainsHtml=html;
+  if(S_pantryView==='remain')cont.innerHTML=html;
 }
 
 /* Pantry view — structured add form, inline category edit */
@@ -1836,8 +1840,17 @@ Return ONLY valid JSON (no markdown, no code fences):
 {"Sunday":{"type":"rest","rest":[{"time":"Breakfast","name":"Crispy fried egg and avocado toast (~8 min)","detail":"2 large eggs, 2 slices sourdough bread, 1 ripe avocado, ½ tsp chilli flakes, juice of ½ lemon, flaky salt","calories":480,"protein":22,"carbs":40,"fat":26,"steps":["Heat 1 tbsp (15ml) olive oil in a non-stick frying pan over medium-high heat until shimmering.","Crack 2 large eggs directly into the pan. Season immediately with a pinch of salt and a grind of black pepper. Fry undisturbed for 2–3 min until the whites are fully set and the edges are golden and lacy.","Meanwhile, toast 2 slices of sourdough until deep golden. Halve 1 ripe avocado, remove the stone, and scoop the flesh into a small bowl.","Mash the avocado with the juice of ½ lemon (approx 15ml), ½ tsp chilli flakes and ¼ tsp flaky salt until roughly smooth.","Spread the mashed avocado evenly over both toast slices. Slide one fried egg onto each slice. Finish with another pinch of flaky salt and serve immediately."]}]},"Monday":{"type":"training","training":[{"time":"Breakfast","name":"Overnight oats with blueberries (prep night before, 2 min morning)","detail":"50g rolled oats, 180ml semi-skimmed milk, 1 tbsp chia seeds, 80g blueberries, 1 tbsp honey","calories":380,"protein":14,"carbs":60,"fat":7,"steps":["The night before: add 50g rolled oats, 180ml semi-skimmed milk and 1 tbsp chia seeds to a jar or lidded container. Stir thoroughly to combine.","Cover and refrigerate for at least 6 hours or overnight.","In the morning: remove from fridge, top with 80g blueberries and drizzle over 1 tbsp honey. Eat cold straight from the jar."]},{"time":"Pre-workout","name":"Banana and whey protein shake (2 min)","detail":"1 banana (~120g), 30g vanilla whey protein powder, 250ml semi-skimmed milk","calories":300,"protein":28,"carbs":36,"fat":5,"steps":["Peel 1 banana and break into 3–4 chunks. Add to a blender with 30g whey protein powder and 250ml cold semi-skimmed milk.","Blend on high for 20–25 seconds until completely smooth. Drink immediately."]},{"time":"Lunch","name":"Sunday-batch harissa chicken rice bowl (assembly only, 3 min)","detail":"180g Sunday-batch harissa chicken thighs (microwave 2 min), 150g Sunday-batch brown rice (microwave 1 min), 80g Sunday-batch roasted red peppers, 1 tbsp tahini, 1 tsp lemon juice, handful rocket (20g)","calories":540,"protein":48,"carbs":50,"fat":12,"steps":["Place 180g batch chicken in a microwave-safe dish, cover loosely with a damp piece of kitchen paper. Microwave on high for 2 min until piping hot throughout.","Place 150g batch brown rice in a separate microwave-safe bowl. Add 1 tsp water, cover and microwave on high for 1 min. Fluff with a fork.","Spoon the rice into a bowl and top with the hot chicken and 80g roasted red peppers.","Mix 1 tbsp tahini with 1 tsp lemon juice and 2 tsp water to loosen into a drizzleable sauce. Pour over the bowl.","Add a handful of rocket (approx 20g) and serve immediately."]}]},"Tuesday":{"type":"rest","rest":[...]},"Wednesday":{"type":"training","training":[...]},"Thursday":{"type":"rest","rest":[...]},"Friday":{"type":"training","training":[...]},"Saturday":{"type":"rest","rest":[...]},"_sundayPrep":[{"task":"Harissa-marinated chicken thighs","note":"Yields 4×180g cooked portions (720g total). Used Mon/Wed/Fri lunches and Tue dinner. Keeps 4 days refrigerated.","steps":["Preheat oven to 200°C fan / 220°C conventional.","In a large bowl combine 3 tbsp (45g) harissa paste, 2 tbsp (30ml) olive oil, 1 tsp ground cumin, 1 tsp garlic powder, ½ tsp smoked paprika and ½ tsp fine salt. Mix until a smooth marinade forms.","Add 720g boneless skinless chicken thighs and turn to coat every surface evenly. Leave to marinate at room temperature for 15 min (or refrigerate up to 24 hours for deeper flavour).","Arrange in a single layer on a large baking tray lined with foil. Roast for 25–28 min until the edges are charred, the skin is sticky and an instant-read thermometer inserted into the thickest part reads 75°C.","Remove from the oven and rest for 5 min. Slice each thigh into thick strips and divide into 4 equal portions of approximately 180g each.","Transfer each 180g portion into a labelled airtight container. Refrigerate immediately. Use within 4 days or freeze for up to 3 months."]}],"_pantryAfter":[{"name":"Chicken thighs 800g","remaining":"0g","freeze":false,"note":"Used 180g Mon lunch, 180g Wed lunch, 180g Fri lunch, 180g Tue dinner"},{"name":"Bananas 6","remaining":"1","freeze":false,"note":"1 Mon pre-workout, 1 Wed pre-workout, 1 Fri pre-workout, 1 Tue snack, 1 Thu snack. 1 remaining."}]}`;
 
   try{
-    const raw=await apiCall([{role:'user',content:prompt}],8000);
-    const newPlan=JSON.parse(raw.replace(/```json\n?|```/g,'').trim());
+    const raw=await apiCall([{role:'user',content:prompt}],16000);
+    let newPlan;
+    try{newPlan=JSON.parse(raw.replace(/```json\n?|```/g,'').trim());}
+    catch(parseErr){
+      /* JSON truncated — try recovering a partial plan by finding the last valid closing */
+      const attempt=raw.replace(/```json\n?|```/g,'').trim();
+      console.error('Parse error in genMeals, raw length:',attempt.length,'chars. First 200:',attempt.slice(0,200));
+      toast('Meal plan JSON was truncated — try regenerating','warn');
+      btn.disabled=false;btn.textContent='✦ Generate this week\'s meal plan';
+      return;
+    }
     setMealPlan(wo,newPlan);
     award('meal');
     /* Refresh pantry tab "what remains" immediately */
@@ -1983,8 +1996,15 @@ async function genShop(skipLoader,weekOffset){
   const nonStapleOwned=_sp.filter(i=>{
     const n=(i.itemName||i.name||'').toLowerCase();
     return !ALL_STAPLES_LIST.some(s=>n.includes(s.split(' ')[0]));
-  }).map(i=>i.name||i);
-  const pantryNote=nonStapleOwned.length?`\nNON-STAPLE ITEMS ALREADY IN PANTRY (exclude from shopping list): ${nonStapleOwned.join(', ')}`:'';
+  }).map(i=>{
+    /* Use clean base name + quantity so AI can match ingredient names in the meal plan */
+    const base=i.itemName||(i.name||'').replace(/\s*[\d.]+\s*[a-zA-Z]*$/,'').trim()||i.name||'';
+    const qty=i.qty!=null?` (${i.qty}${i.unit&&i.unit!=='units'?i.unit:''})`:'';
+    return base+qty;
+  }).filter(Boolean);
+  const pantryNote=nonStapleOwned.length
+    ?`\nITEMS ALREADY IN PANTRY — DO NOT add these to the shopping list (user already owns them): ${nonStapleOwned.join(', ')}`
+    :'';
 
   const SPECIALTY_NOTE=`IMPORTANT — always add to shopping list if used in any meal (never assume in stock): harissa paste, miso paste, tahini, fish sauce, oyster sauce, hoisin sauce, sriracha, gochujang, mirin, rice wine vinegar, za'atar, sumac, ras el hanout, berbere, preserved lemons, anchovy paste, sesame oil, coconut milk, coconut cream, any named spice blend, Dijon mustard, honey, butter, fresh ginger, fresh chillies, fresh herbs (parsley, coriander, basil, mint, dill, chives), capers, olives, sundried tomatoes, any cheese (feta, parmesan, halloumi, ricotta), yogurt, lemons, limes, garlic, onions, shallots, spring onions.`;
 
