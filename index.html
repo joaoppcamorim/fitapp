@@ -304,7 +304,7 @@ function getSVG(name){
 }
 
 /* ═══ APP VERSION ═══ */
-const APP_VERSION='1.1.0';
+const APP_VERSION='1.2.0';
 const APP_DEPLOYED='5 Apr 2025'; /* Update this string on each deploy */
 
 /* ═══ PHASE DEFINITIONS ═══ */
@@ -2306,49 +2306,65 @@ function addTickedToPantry(){
   const list=getShopList(wo);
   const tx=getShopTx(wo);
   if(!list)return;
-  /* Target pantry week: same week as the shopping list */
   const pantry=getPantry(wo);
   const existing=new Set(pantry.map(i=>(i.itemName||i.name||'').toLowerCase()));
   let added=0;
-  /* Skip the Staples section — these are always assumed in stock */
-  const SKIP_CATS=['Staples to check','Staples','Pantry staples'];
+  const SKIP_CATS=['staples to check','staples','pantry staples'];
+
   Object.entries(list).forEach(([cat,items])=>{
-    if(SKIP_CATS.some(s=>cat.toLowerCase().includes(s.toLowerCase())))return;
+    /* Skip the staples section and any non-array values */
+    if(SKIP_CATS.some(s=>cat.toLowerCase().includes(s)))return;
+    if(!Array.isArray(items))return;
+
     items.forEach((item,i)=>{
       const k=cat+'_'+i;
       if(!tx[k])return; /* not ticked */
-      const name=item.item||item.name||'';
-      const qty=item.qty||item.quantity||'';
+      const name=(item.item||item.name||'').trim();
       if(!name)return;
-      /* Parse qty and unit from the qty string e.g. "800g", "2 packs", "6" */
+
+      /* Parse qty/unit from strings like "800g", "2 packs", "1×400ml", "6" */
+      const qtyStr=(item.qty||item.quantity||'').trim();
       let parsedQty=null;let parsedUnit='units';
-      const m=qty.match(/^([\d.]+)\s*([a-zA-Z]*)$/);
-      if(m){
-        parsedQty=parseFloat(m[1]);
-        const u=m[2].toLowerCase();
-        if(u)parsedUnit=PANTRY_UNITS.includes(u)?u:u.replace(/s$/,'');
-      } else if(/^\d+$/.test(qty.trim())){
-        parsedQty=parseFloat(qty.trim());
+      /* Handle "2×400g" or "2 x 400g" — take the total or first number */
+      const multi=qtyStr.match(/^(\d+)\s*[×x]\s*([\d.]+)\s*([a-zA-Z]+)?/);
+      if(multi){
+        parsedQty=parseFloat(multi[1])*parseFloat(multi[2]);
+        parsedUnit=multi[3]?multi[3].toLowerCase():'g';
+      } else {
+        const simple=qtyStr.match(/^([\d.]+)\s*([a-zA-Z]*)/);
+        if(simple){
+          parsedQty=parseFloat(simple[1]);
+          const u=simple[2].toLowerCase().replace(/s$/,'');
+          parsedUnit=u?( PANTRY_UNITS.includes(u)?u:PANTRY_UNITS.includes(u+'s')?u:'units' ):'units';
+        }
       }
-      const displayName=parsedQty!=null?`${name} ${parsedQty}${parsedUnit==='units'?'':parsedUnit}`:name;
+
       const lname=name.toLowerCase();
-      /* Avoid duplicates — if same item already in pantry, skip */
-      if(existing.has(lname))return;
+      if(existing.has(lname))return; /* already in pantry */
       existing.add(lname);
+
+      const displayName=parsedQty!=null
+        ?`${name} ${parsedQty}${parsedUnit==='units'?'':parsedUnit}`
+        :name;
+
       pantry.push({
         name:displayName,
         itemName:name,
         qty:parsedQty,
         unit:parsedUnit,
         perishable:isPerishable(name),
-        frozen:false
+        frozen:false,
+        fridge:false
       });
       added++;
     });
   });
+
   setPantry(wo,pantry);
+
   if(added>0){
     toast(`✓ ${added} item${added!==1?'s':''} added to pantry`);
+    renderShop(); /* refresh shop to hide/update the banner */
   } else {
     toast('All ticked items already in pantry','warn');
   }
