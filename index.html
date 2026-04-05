@@ -304,7 +304,7 @@ function getSVG(name){
 }
 
 /* ═══ APP VERSION ═══ */
-const APP_VERSION='1.0.3';
+const APP_VERSION='1.0.4';
 const APP_DEPLOYED='5 Apr 2025'; /* Update this string on each deploy */
 
 /* ═══ PHASE DEFINITIONS ═══ */
@@ -1320,7 +1320,7 @@ function renderWhatRemains(){
   const cont=document.getElementById('pantryTabCont');
   if(!cont)return;
 
-  if(!_plan||!_plan._pantryAfter||!_plan._pantryAfter.length){
+  if(!_plan||!_plan._pantryAfter){
     const emptyHtml=`<div class="card" style="font-size:13px;color:var(--mt);line-height:1.6">
       No meal plan generated yet for ${weekLabel(wo)}. Generate a meal plan and the expected remaining quantities will appear here.
     </div>`;
@@ -1329,29 +1329,71 @@ function renderWhatRemains(){
     return;
   }
 
+  /* Original pantry items — used to catch things the AI silently omitted */
+  const originalPantry=getPantry(wo);
+
   const consumed=[];const remaining=[];const toFreeze=[];
-  _plan._pantryAfter.forEach(pa=>{
+
+  /* Track which original pantry items appear in _pantryAfter */
+  const mentionedNames=new Set();
+
+  (_plan._pantryAfter||[]).forEach(pa=>{
     const rem=String(pa.remaining||'').trim();
-    const isZero=!rem||rem==='0'||rem==='0g'||rem==='0ml'||rem.toLowerCase()==='none'||rem.toLowerCase().includes('fully used');
+    const isZero=!rem||rem==='0'||rem==='0g'||rem==='0ml'||
+      rem.toLowerCase()==='none'||rem.toLowerCase().includes('fully used');
     const baseName=pa.name.replace(/\s*[\d.]+\s*[a-zA-Z]*\s*$/,'').trim()||pa.name;
-    if(isZero)consumed.push({name:baseName,note:pa.note||''});
-    else if(pa.freeze)toFreeze.push({name:baseName,qty:rem,note:pa.note||''});
+    /* Record every name the AI mentioned so we can find gaps */
+    mentionedNames.add(baseName.toLowerCase());
+    if(isZero) consumed.push({name:baseName,note:pa.note||''});
+    else if(pa.freeze) toFreeze.push({name:baseName,qty:rem,note:pa.note||''});
     else remaining.push({name:baseName,qty:rem,note:pa.note||''});
+  });
+
+  /* Any original pantry item NOT in _pantryAfter was fully consumed (AI just omitted it) */
+  originalPantry.forEach(item=>{
+    const itemBase=(item.itemName||item.name||'').replace(/\s*[\d.]+\s*[a-zA-Z]*\s*$/,'').trim();
+    const lc=itemBase.toLowerCase();
+    /* Check if AI already covered this item under any name */
+    const alreadyCovered=[...mentionedNames].some(m=>
+      m.includes(lc.split(' ')[0])||lc.includes(m.split(' ')[0])
+    );
+    if(!alreadyCovered){
+      consumed.push({name:itemBase||item.name,note:'Not mentioned in plan — assumed fully used'});
+    }
   });
 
   let html=`<div class="card" style="font-size:13px;color:var(--mt);line-height:1.6;margin-bottom:12px">
     Expected pantry state at end of <strong>${weekLabel(wo)}</strong> if the meal plan is fully followed.
     <button onclick="applyPantryAfter()" class="btn btn-p btn-f" style="margin-top:8px;background:var(--g)">✓ Apply pantry changes after cooking</button>
   </div>`;
+
   function remRow(r,col){return`<div style="display:flex;align-items:flex-start;gap:8px;padding:7px 0;border-bottom:.5px solid var(--br)">
     <span style="flex:1;font-size:14px;color:var(--tx)">${r.name}</span>
     <div style="text-align:right;flex-shrink:0"><div style="font-size:13px;font-weight:600;color:${col}">${r.qty||''}</div>${r.note?`<div style="font-size:11px;color:var(--mt);max-width:160px;line-height:1.3">${r.note}</div>`:''}</div>
   </div>`;}
-  if(remaining.length){html+=`<div style="font-size:11px;font-weight:600;color:var(--mt);letter-spacing:.06em;text-transform:uppercase;margin:12px 0 6px">Remaining in pantry (${remaining.length})</div><div class="card" style="padding:0 12px">`;remaining.forEach(r=>{html+=remRow(r,'var(--tx)');});html+='</div>';}
-  if(toFreeze.length){html+=`<div style="font-size:11px;font-weight:600;color:var(--bd);letter-spacing:.06em;text-transform:uppercase;margin:12px 0 6px">❄ Freeze before end of week (${toFreeze.length})</div><div style="background:var(--bl);border-radius:var(--r);padding:0 12px">`;toFreeze.forEach(r=>{html+=remRow(r,'var(--bd)');});html+='</div>';}
-  if(consumed.length){html+=`<div style="font-size:11px;font-weight:600;color:var(--g);letter-spacing:.06em;text-transform:uppercase;margin:12px 0 6px">✓ Fully consumed (${consumed.length})</div><div class="card" style="padding:0 12px">`;consumed.forEach(r=>{html+=`<div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:.5px solid var(--br)"><span style="flex:1;font-size:14px;color:var(--mt);text-decoration:line-through">${r.name}</span><span style="font-size:12px;color:var(--g);font-weight:600">all used ✓</span></div>`;});html+='</div>';}
 
-  /* Always cache — regardless of which tab is active */
+  if(remaining.length){
+    html+=`<div style="font-size:11px;font-weight:600;color:var(--mt);letter-spacing:.06em;text-transform:uppercase;margin:12px 0 6px">Remaining in pantry (${remaining.length})</div>`;
+    html+=`<div class="card" style="padding:0 12px">`;remaining.forEach(r=>{html+=remRow(r,'var(--tx)');});html+='</div>';
+  }
+  if(toFreeze.length){
+    html+=`<div style="font-size:11px;font-weight:600;color:var(--bd);letter-spacing:.06em;text-transform:uppercase;margin:12px 0 6px">❄ Freeze before end of week (${toFreeze.length})</div>`;
+    html+=`<div style="background:var(--bl);border-radius:var(--r);padding:0 12px">`;toFreeze.forEach(r=>{html+=remRow(r,'var(--bd)');});html+='</div>';
+  }
+  if(consumed.length){
+    html+=`<div style="font-size:11px;font-weight:600;color:var(--g);letter-spacing:.06em;text-transform:uppercase;margin:12px 0 6px">✓ Fully consumed (${consumed.length})</div>`;
+    html+=`<div class="card" style="padding:0 12px">`;
+    consumed.forEach(r=>{html+=`<div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:.5px solid var(--br)">
+      <span style="flex:1;font-size:14px;color:var(--mt);text-decoration:line-through">${r.name}</span>
+      <span style="font-size:12px;color:var(--g);font-weight:600">all used ✓</span>
+    </div>`;});
+    html+='</div>';
+  }
+
+  if(!remaining.length&&!toFreeze.length&&!consumed.length){
+    html+=`<div style="font-size:13px;color:var(--mt);padding:8px 0">No pantry items tracked. Add items to your pantry and generate a meal plan.</div>`;
+  }
+
   window._whatRemainsHtml=html;
   if(S_pantryView==='remain')cont.innerHTML=html;
 }
@@ -2119,12 +2161,69 @@ Return ONLY valid JSON (no markdown). MUST contain "Staples to check" as final k
 {"Meat & fish":[{"item":"Chicken thighs","qty":"800g"},{"item":"Harissa paste","qty":"3 tbsp"}],"Dairy & eggs":[{"item":"Free range eggs","qty":"12 pack"},{"item":"Feta cheese","qty":"200g"},{"item":"Butter","qty":"100g"}],"Vegetables":[{"item":"Tenderstem broccoli","qty":"200g"},{"item":"Garlic","qty":"1 bulb"}],"Fruit":[{"item":"Lemons","qty":"4"},{"item":"Limes","qty":"2"}],"Carbs & grains":[{"item":"Brown rice","qty":"500g"}],"Tins & jars":[{"item":"Chickpeas","qty":"2×400g tins"},{"item":"Tahini","qty":"1 jar (280g)"},{"item":"Coconut milk","qty":"1×400ml tin"}],"Chilled & deli":[{"item":"Greek yogurt","qty":"1kg"}],"Oils & condiments":[{"item":"Olive oil","qty":"500ml bottle"},{"item":"Smoked paprika","qty":"1 jar"},{"item":"Ground cumin","qty":"1 jar"},{"item":"Sesame oil","qty":"1 bottle"}],"Fresh herbs":[{"item":"Fresh coriander","qty":"1 bunch"}],"Supplements":[{"item":"Whey protein","qty":"1 tub"}],"Staples to check":[{"item":"Olive oil","qty":"~6 tbsp this week"},{"item":"Smoked paprika","qty":"~2 tsp this week"},{"item":"Ground cumin","qty":"~3 tsp this week"},{"item":"Garlic","qty":"3 cloves this week"}]}`;
   try{
     const raw=await apiCall([{role:'user',content:prompt}],2500);
-    const list=JSON.parse(raw.replace(/```json|```/g,'').trim());
+    let list=JSON.parse(raw.replace(/```json|```/g,'').trim());
+    /* ── Client-side pantry subtraction (guaranteed, regardless of AI) ── */
+    list=subtractPantryFromShopList(list,wo);
     setShopList(wo,list);setShopTx(wo,{});award('shop');
   }catch(e){setShopList(wo,fbShop());}
   renderShop();if(btn)btn.disabled=false;
 }
 function ocadoUrl(n){return'https://www.ocado.com/search?entry='+encodeURIComponent(n);}
+
+/* ── Client-side pantry subtraction ──
+   Removes or adjusts shopping list items that are already in the pantry.
+   Uses fuzzy name matching so "Brown rice (500g)" matches "Brown rice" in the list. */
+function subtractPantryFromShopList(list,wo){
+  if(!list||typeof list!=='object')return list;
+  const pantry=getPantry(wo);
+  if(!pantry.length)return list;
+
+  /* Normalise a string to its bare ingredient name for comparison */
+  function bare(s){
+    return (s||'').toLowerCase()
+      .replace(/\s*[\d.,]+\s*(g|kg|ml|l|tsp|tbsp|cup|can|pack|bunch|slice|fillet|portion|units?|x\d+)?\b/gi,'')
+      .replace(/[()[\]]/g,'')
+      .replace(/\s+/g,' ').trim();
+  }
+
+  /* Build a set of pantry bare names */
+  const pantryBares=pantry.map(i=>{
+    const n=i.itemName||(i.name||'').replace(/\s*[\d.]+\s*[a-zA-Z]*$/,'').trim()||i.name||'';
+    return bare(n);
+  }).filter(Boolean);
+
+  /* Check if a shop item name matches any pantry item */
+  function isInPantry(shopName){
+    const b=bare(shopName);
+    if(!b)return false;
+    const words=b.split(' ').filter(w=>w.length>2);
+    return pantryBares.some(pb=>{
+      /* Direct substring match */
+      if(pb.includes(b)||b.includes(pb))return true;
+      /* Word overlap — if majority of significant words match */
+      const matchCount=words.filter(w=>pb.includes(w)).length;
+      return words.length>0&&matchCount/words.length>=0.6;
+    });
+  }
+
+  /* Filter each section — skip the Staples section */
+  const SKIP_CATS=['staples to check','staples','pantry staples'];
+  const filtered={};
+  Object.entries(list).forEach(([cat,items])=>{
+    if(SKIP_CATS.some(s=>cat.toLowerCase().includes(s))){
+      filtered[cat]=items; /* always keep staples-to-check as-is */
+      return;
+    }
+    if(!Array.isArray(items)){filtered[cat]=items;return;}
+    const kept=items.filter(item=>{
+      const name=item.item||item.name||'';
+      return !isInPantry(name);
+    });
+    if(kept.length)filtered[cat]=kept;
+    /* If whole section emptied, omit it from the list */
+  });
+  return filtered;
+}
 
 /* Shop nav now handled by meal week strip */
 
