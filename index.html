@@ -3,6 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="FitTrack">
@@ -153,20 +156,24 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 <div id="s-today" class="screen on">
   <div class="phb" id="phb"><div class="phn" id="phn">1</div><div class="phi" id="phi"></div></div>
   <div class="mgrid">
-    <div class="mc"><div class="mv" id="tw">98.0</div><div class="ml">kg now</div></div>
+    <div class="mc"><div class="mv" id="tw">93.7</div><div class="ml">kg now</div></div>
     <div class="mc"><div class="mv" id="tl">0.0</div><div class="ml">kg lost</div></div>
     <div class="mc"><div class="mv" id="ttg">28.0</div><div class="ml">to goal</div></div>
   </div>
   <div class="card" style="margin-bottom:12px">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px"><span style="font-size:13px;font-weight:600">Goal progress</span><span style="font-size:13px;color:var(--mt)" id="tpct">0%</span></div>
     <div class="pw"><div class="pf" id="tbar" style="width:0%"></div></div>
-    <div style="display:flex;justify-content:space-between;margin-top:5px;font-size:11px;color:var(--mt)"><span>98 kg</span><span id="goal-lbl">Goal 70 kg</span></div>
+    <div style="display:flex;justify-content:space-between;margin-top:5px;font-size:11px;color:var(--mt)"><span>93.7 kg</span><span id="goal-lbl">Goal 70 kg</span></div>
   </div>
   <div class="slbl">This week</div>
   <div class="card"><div class="strk" id="strk"></div></div>
   <div class="slbl">Today's plan</div>
   <div class="card" style="cursor:pointer" onclick="nav('workout')"><div style="display:flex;align-items:center;gap:12px"><div style="width:42px;height:42px;border-radius:12px;background:var(--gl);display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0">💪</div><div style="flex:1" id="twi"><div style="font-weight:500">Loading…</div></div><div style="color:var(--mt)">›</div></div></div>
   <div class="card" style="cursor:pointer;margin-top:2px" onclick="nav('meals')"><div style="display:flex;align-items:center;gap:12px"><div style="width:42px;height:42px;border-radius:12px;background:var(--al);display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0">🥗</div><div style="flex:1" id="tmi"><div style="font-weight:500">Meals</div><div style="font-size:12px;color:var(--mt)">Tap to view</div></div><div style="color:var(--mt)">›</div></div></div>
+  <div class="slbl">Today's nutrition</div>
+  <div id="macro-tracker" class="card"></div>
+  <div class="slbl">Calories today</div>
+  <div id="cal-tracker" class="card"></div>
   <div class="slbl">Recent badges</div>
   <div id="rbadg" style="display:flex;gap:8px;flex-wrap:wrap"></div>
   <div id="app-version-footer" style="margin-top:18px;padding:10px 0 4px;border-top:.5px solid var(--br);display:flex;align-items:center;justify-content:space-between">
@@ -185,9 +192,9 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
   <div id="stretch-goals"></div>
   <div class="slbl">Session type</div>
   <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap">
-    <button class="btn btn-s btn-p" id="tab-wu" onclick="stTab('wu')">Warm-up</button>
-    <button class="btn btn-s" id="tab-cd" onclick="stTab('cd')">Cool-down</button>
-    <button class="btn btn-s" id="tab-mob" onclick="stTab('mob')">Mobility</button>
+    <button class="btn btn-s btn-p" id="tab-wu" onclick="stTab('wu')">🔥 Warm-up</button>
+    <button class="btn btn-s" id="tab-mob" onclick="stTab('mob')">🧘 Mobility</button>
+    <button class="btn btn-s" id="tab-cd" onclick="stTab('cd')">❄️ Cool-down</button>
     <button class="btn btn-s" id="tab-split" onclick="stTab('split')">Splits prog.</button>
     <button class="btn btn-s" id="tab-back" onclick="stTab('back')">Backbend prog.</button>
   </div>
@@ -207,10 +214,6 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
     <button class="btn btn-s" id="mv-favs" onclick="setMealView('favs')">❤ Saved</button>
   </div>
   <!-- Meal type toggle (only shown in meals view) -->
-  <div id="meal-type-row" style="display:flex;gap:8px;margin-bottom:10px">
-    <button class="btn btn-s" id="mtt" onclick="mType('train')" style="flex:1">Training day</button>
-    <button class="btn btn-s" id="mtr" onclick="mType('rest')" style="flex:1">Rest day</button>
-  </div>
   <div id="pcalinfo" class="card" style="margin-bottom:10px;font-size:13px;color:var(--mt);line-height:1.6"></div>
   <div id="meal-actions" style="display:flex;flex-direction:column;gap:8px;margin-bottom:4px">
     <button class="btn btn-p btn-f" onclick="genMeals()" id="genbtn">✦ Generate this week's meal plan</button>
@@ -234,12 +237,21 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 </div>
 
 <div id="s-weight" class="screen">
-  <div class="slbl">Log weight</div>
-  <div class="wr"><input type="number" id="wi" placeholder="e.g. 97.2 kg" step="0.1" min="40" max="250"><button class="btn btn-p" onclick="logW()">Log</button></div>
-  <div class="slbl">Progress chart</div>
-  <div class="card"><div class="cwrap"><canvas id="wChart"></canvas></div></div>
-  <div class="slbl">History</div>
-  <div class="card" id="whist"></div>
+  <div class="slbl">Progress tracking</div>
+  <div style="display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap">
+    <button class="btn btn-s btn-p" id="prog-weight" onclick="setProgView('weight')">⚖️ Weight</button>
+    <button class="btn btn-s" id="prog-strength" onclick="setProgView('strength')">💪 Strength</button>
+    <button class="btn btn-s" id="prog-cardio" onclick="setProgView('cardio')">🚴 Cardio</button>
+    <button class="btn btn-s" id="prog-stretch" onclick="setProgView('stretch')">🧘 Stretch</button>
+  </div>
+  <div id="prog-cont">
+    <!-- weight view rendered by default -->
+    <div class="wr"><input type="number" id="wi" placeholder="e.g. 91.5 kg" step="0.1" min="40" max="250"><button class="btn btn-p" onclick="logW()">Log</button></div>
+    <div class="slbl">Progress chart</div>
+    <div class="card"><div class="cwrap"><canvas id="wChart"></canvas></div></div>
+    <div class="slbl">History</div>
+    <div class="card" id="whist"></div>
+  </div>
 </div>
 
 
@@ -304,97 +316,106 @@ function getSVG(name){
 }
 
 /* ═══ APP VERSION ═══ */
-const APP_VERSION='1.3.0';
-const APP_DEPLOYED='5 Apr 2025'; /* Update this string on each deploy */
+const APP_VERSION='1.5.0';
+const APP_DEPLOYED='10 Apr 2025'; /* Update this string on each deploy */
+
+/* Starting date — the day the programme begins */
+const START_DATE_STR='2025-04-11'; /* tomorrow */
+function getStartDate(){return new Date(START_DATE_STR);}
+function daysSinceStart(){return Math.max(0,Math.floor((Date.now()-getStartDate().getTime())/86400000));}
+function weeksSinceStart(){return Math.floor(daysSinceStart()/7);}
 
 /* ═══ PHASE DEFINITIONS ═══ */
 const PH={
-  1:{label:'Foundation',sub:'Full body · 2×15 · 90s rest',col:'#1D9E75',bg:'#E1F5EE',tc:'#085041',threshold:24,split:'full',tKcal:2100,rKcal:1850,tP:185,tC:210,tF:58,rP:166,rC:160,rF:62,goal:'Fat loss & habit building',note:'Learn machines, build the routine.',cMin:20,cType:'Zone 2 steady state'},
-  2:{label:'Build',sub:'Upper/Lower · 3×10–12 · 75s rest',col:'#378ADD',bg:'#E6F1FB',tc:'#0C447C',threshold:48,split:'upper_lower',tKcal:2050,rKcal:1800,tP:185,tC:200,tF:55,rP:166,rC:145,rF:60,goal:'Fat loss + muscle growth',note:'Upper/lower split. Increase load each week.',cMin:30,cType:'Intervals 2:1'},
-  3:{label:'Sculpt',sub:'Push/Pull/Legs · 4×8–10 · 60s rest',col:'#D85A30',bg:'#FAECE7',tc:'#4A1B0C',threshold:72,split:'push_pull_legs',tKcal:1950,rKcal:1700,tP:185,tC:185,tF:52,rP:166,rC:130,rF:58,goal:'Body recomposition',note:'Drop sets, supersets, peak phase.',cMin:30,cType:'HIIT + steady state'},
-  4:{label:'Maintenance',sub:'Full body advanced · 3×12',col:'#534AB7',bg:'#EEEDFE',tc:'#26215C',threshold:100,split:'full_adv',tKcal:2400,rKcal:2100,tP:175,tC:260,tF:75,rP:160,rC:210,rF:72,goal:'Maintain 70 kg',note:'Goal reached! Maintenance calories.',cMin:25,cType:'Mixed cardio'},
+  1:{label:'Foundation',sub:'Full body · 2×15 · 90s rest',col:'#1D9E75',bg:'#E1F5EE',tc:'#085041',threshold:24,split:'full',tKcal:2100,rKcal:1850,tP:185,tC:210,tF:58,rP:166,rC:160,rF:62,goal:'Fat loss & habit building',note:'Learn machines, build the routine.',cMin:20,cType:'Treadmill / Stationary Bike / Elliptical'},
+  2:{label:'Build',sub:'Upper/Lower · 3×10–12 · 75s rest',col:'#378ADD',bg:'#E6F1FB',tc:'#0C447C',threshold:48,split:'upper_lower',tKcal:2050,rKcal:1800,tP:185,tC:200,tF:55,rP:166,rC:145,rF:60,goal:'Fat loss + muscle growth',note:'Upper/lower split. Increase load each week.',cMin:30,cType:'Row Machine / Elliptical intervals'},
+  3:{label:'Sculpt',sub:'Push/Pull/Legs · 4×8–10 · 60s rest',col:'#D85A30',bg:'#FAECE7',tc:'#4A1B0C',threshold:72,split:'push_pull_legs',tKcal:1950,rKcal:1700,tP:185,tC:185,tF:52,rP:166,rC:130,rF:58,goal:'Body recomposition',note:'Drop sets, supersets, peak phase.',cMin:30,cType:'Step Machine HIIT + Treadmill steady state'},
+  4:{label:'Maintenance',sub:'Full body advanced · 3×12',col:'#534AB7',bg:'#EEEDFE',tc:'#26215C',threshold:100,split:'full_adv',tKcal:2400,rKcal:2100,tP:175,tC:260,tF:75,rP:160,rC:210,rF:72,goal:'Maintain 70 kg',note:'Goal reached! Maintenance calories.',cMin:25,cType:'Row Machine / Bike / Elliptical rotation'},
   5:{label:'Strength',sub:'Powerbuilding · 4×6–8 · heavy',col:'#BA7517',bg:'#FAEEDA',tc:'#412402',threshold:130,split:'powerbuilding',tKcal:2600,rKcal:2200,tP:180,tC:290,tF:80,rP:165,rC:225,rF:76,goal:'Strength & muscle gain',note:'Slight surplus. Heavier loads.',cMin:20,cType:'2× conditioning'},
   6:{label:'Elite',sub:'Advanced 5-day · periodised',col:'#1A1A18',bg:'#F1EFE8',tc:'#1A1A18',threshold:99999,split:'elite',tKcal:2800,rKcal:2300,tP:190,tC:320,tF:85,rP:170,rC:250,rF:80,goal:'Elite performance',note:'Advanced periodisation.',cMin:20,cType:'Sport/varied'}
 };
 
 /* ═══ EXERCISES WITH ALTERNATIVES ═══ */
+/* Available equipment: Treadmill, Elliptical, Stationary Bike, Row Machine, Step Machine,
+   Leg Curl Machine, Leg Press Machine, Cable Machine, Leg Extension Machine,
+   Chest Press Machine, Shoulder Press Machine, Cable Pull Machine */
 const EX={
   full:[
-    {n:'Leg press',m:'Leg press machine',s:2,r:'15',svg:'leg_press',alts:['Goblet squat (dumbbells)','Bodyweight squat with pause','Smith machine squat','Hack squat machine']},
-    {n:'Chest press',m:'Chest press machine',s:2,r:'15',svg:'chest_press',alts:['Dumbbell bench press','Push-up (hands elevated)','Cable chest press','Smith machine bench press']},
-    {n:'Lat pulldown',m:'Lat pulldown cable',s:2,r:'15',svg:'lat_pulldown',alts:['Assisted pull-up machine','Resistance band pull-down','Cable straight-arm pulldown','Dumbbell single-arm row']},
-    {n:'Shoulder press',m:'Shoulder press machine',s:2,r:'15',svg:'shoulder_press',alts:['Dumbbell overhead press (seated)','Arnold press','Cable overhead press','Pike push-up']},
-    {n:'Leg curl',m:'Lying leg curl machine',s:2,r:'15',svg:'leg_curl',alts:['Swiss ball leg curl','Single-leg Romanian deadlift','Cable kickback','Nordic curl eccentric']},
-    {n:'Seated row',m:'Cable row machine',s:2,r:'15',svg:'seated_row',alts:['Resistance band seated row','Dumbbell bent-over row','TRX row','Single-arm cable row']},
-    {n:'Ab crunch',m:'Ab crunch machine',s:2,r:'15',svg:'ab_crunch',alts:['Cable crunch (kneeling)','Dead bug (floor)','Plank hold 45s','Hollow body hold']}
+    {n:'Leg press',m:'Leg press machine',s:2,r:'15',svg:'leg_press',alts:['Cable squat (feet forward on platform)','Step machine slow pace for warm-up','Bodyweight squat with pause']},
+    {n:'Chest press',m:'Chest press machine',s:2,r:'15',svg:'chest_press',alts:['Cable chest press (both arms)','Cable fly (low to high)']},
+    {n:'Cable pull-down',m:'Cable machine — high pulley',s:2,r:'15',svg:'lat_pulldown',alts:['Cable pull-through','Cable straight-arm pulldown','Cable single-arm row']},
+    {n:'Shoulder press',m:'Shoulder press machine',s:2,r:'15',svg:'shoulder_press',alts:['Cable overhead press (both arms)','Cable lateral raise']},
+    {n:'Leg curl',m:'Leg curl machine',s:2,r:'15',svg:'leg_curl',alts:['Cable kickback (standing)','Cable Romanian deadlift']},
+    {n:'Cable seated row',m:'Cable machine — low pulley',s:2,r:'15',svg:'seated_row',alts:['Cable face pull','Cable single-arm row','Cable pull-through']},
+    {n:'Cable crunch',m:'Cable machine — kneeling',s:2,r:'15',svg:'ab_crunch',alts:['Plank hold 45s','Dead bug (floor)','Cable wood chop']}
   ],
   upper:[
-    {n:'Chest press',m:'Chest press machine',s:3,r:'10–12',svg:'chest_press',alts:['Dumbbell bench press','Push-up','Cable chest press']},
-    {n:'Lat pulldown',m:'Lat pulldown',s:3,r:'10–12',svg:'lat_pulldown',alts:['Assisted pull-up','Dumbbell row','Resistance band pulldown']},
-    {n:'Incline press',m:'Incline chest press machine',s:3,r:'10–12',svg:'incline_press',alts:['Dumbbell incline press','Cable upper chest fly','Incline push-up']},
-    {n:'Seated row',m:'Cable row',s:3,r:'10–12',svg:'seated_row',alts:['Dumbbell row','Resistance band row','TRX row']},
-    {n:'Shoulder press',m:'Shoulder press machine',s:3,r:'10–12',svg:'shoulder_press',alts:['Dumbbell shoulder press','Cable overhead press','Barbell press']},
-    {n:'Tricep pushdown',m:'Cable with rope attachment',s:2,r:'12',svg:'tricep_push',alts:['Overhead tricep extension (dumbbell)','Close-grip push-up','Bench dip']},
-    {n:'Bicep curl',m:'Preacher curl / cable',s:2,r:'12',svg:'bicep_curl',alts:['Dumbbell curl','Resistance band curl','Hammer curl']}
+    {n:'Chest press',m:'Chest press machine',s:3,r:'10–12',svg:'chest_press',alts:['Cable chest press','Cable fly (standing)']},
+    {n:'Cable pull-down',m:'Cable machine — high pulley',s:3,r:'10–12',svg:'lat_pulldown',alts:['Cable straight-arm pulldown','Cable single-arm pulldown']},
+    {n:'Cable row',m:'Cable machine — low pulley',s:3,r:'10–12',svg:'seated_row',alts:['Cable single-arm row','Cable face pull']},
+    {n:'Shoulder press',m:'Shoulder press machine',s:3,r:'10–12',svg:'shoulder_press',alts:['Cable overhead press','Cable lateral raise']},
+    {n:'Cable lateral raise',m:'Cable machine — low pulley',s:3,r:'15',svg:'shoulder_press',alts:['Cable front raise','Cable reverse fly']},
+    {n:'Cable tricep pushdown',m:'Cable machine — rope attachment',s:2,r:'12',svg:'tricep_push',alts:['Cable overhead tricep extension','Cable single-arm pushdown']},
+    {n:'Cable bicep curl',m:'Cable machine — low pulley',s:2,r:'12',svg:'bicep_curl',alts:['Cable hammer curl','Cable concentration curl']}
   ],
   lower:[
-    {n:'Leg press',m:'Leg press machine',s:4,r:'10–12',svg:'leg_press',alts:['Barbell squat','Goblet squat','Bulgarian split squat']},
-    {n:'Leg extension',m:'Leg extension machine',s:3,r:'12',svg:'leg_ext',alts:['Step-up with knee drive','Sissy squat','Wall sit 60s','Terminal knee extension with band']},
-    {n:'Hamstring curl',m:'Leg curl machine',s:3,r:'12',svg:'leg_curl',alts:['Romanian deadlift (dumbbell)','Swiss ball curl','Nordic curl eccentric','Single-leg deadlift']},
-    {n:'Hip abduction',m:'Abductor machine',s:3,r:'15',svg:'hip_abduction',alts:['Side-lying leg raise','Resistance band walk','Cable hip abduction','Clamshell with band']},
-    {n:'Calf raise',m:'Seated/standing calf raise',s:3,r:'15',svg:'calf_raise',alts:['Step calf raise (bodyweight)','Leg press calf press','Single-leg calf raise','Resistance band calf raise']},
-    {n:'Ab crunch',m:'Ab crunch machine',s:3,r:'15',svg:'ab_crunch',alts:['Cable crunch','Plank 45s','Dead bug','Hanging knee raise']}
+    {n:'Leg press',m:'Leg press machine',s:4,r:'10–12',svg:'leg_press',alts:['Cable squat','Step machine 10 min intervals']},
+    {n:'Leg extension',m:'Leg extension machine',s:3,r:'12',svg:'leg_ext',alts:['Cable leg extension (ankle attachment)','Step-ups on step machine']},
+    {n:'Leg curl',m:'Leg curl machine',s:3,r:'12',svg:'leg_curl',alts:['Cable Romanian deadlift','Cable kickback']},
+    {n:'Cable hip abduction',m:'Cable machine — ankle attachment',s:3,r:'15',svg:'hip_abduction',alts:['Side-lying leg raise','Step machine — high step emphasis']},
+    {n:'Calf raise',m:'Leg press machine (toes on edge)',s:3,r:'15',svg:'calf_raise',alts:['Step machine — raise onto toes each step','Cable calf raise (single leg)']},
+    {n:'Cable crunch',m:'Cable machine — kneeling',s:3,r:'15',svg:'ab_crunch',alts:['Plank 45s','Cable wood chop','Dead bug']}
   ],
   push:[
-    {n:'Chest press',m:'Chest press machine',s:4,r:'8–10',svg:'chest_press',alts:['Dumbbell bench press','Weighted push-up','Cable chest press']},
-    {n:'Pec deck fly',m:'Pec deck machine',s:3,r:'10',svg:'pec_deck',alts:['Cable fly (standing)','Dumbbell fly','Resistance band crossover']},
-    {n:'Incline press',m:'Incline chest press',s:3,r:'10',svg:'incline_press',alts:['Dumbbell incline press','Incline push-up weighted','Cable upper fly']},
-    {n:'Shoulder press',m:'Shoulder press machine',s:3,r:'10',svg:'shoulder_press',alts:['Dumbbell press seated','Arnold press','Barbell overhead press']},
-    {n:'Lateral raise',m:'Cable lateral raise',s:3,r:'15',svg:'shoulder_press',alts:['Dumbbell lateral raise','Resistance band lateral raise','Machine lateral raise']},
-    {n:'Tricep pushdown',m:'Cable rope pushdown',s:3,r:'10+drop',svg:'tricep_push',alts:['Overhead dumbbell extension','Bench dip','Diamond push-up']}
+    {n:'Chest press',m:'Chest press machine',s:4,r:'8–10',svg:'chest_press',alts:['Cable chest press (both arms)','Cable fly (standing)']},
+    {n:'Cable fly',m:'Cable machine — high pulleys',s:3,r:'10',svg:'pec_deck',alts:['Cable low-to-high fly','Cable single-arm fly']},
+    {n:'Cable upper chest fly',m:'Cable machine — low pulleys',s:3,r:'10',svg:'incline_press',alts:['Chest press machine (incline grip)','Cable press-out']},
+    {n:'Shoulder press',m:'Shoulder press machine',s:3,r:'10',svg:'shoulder_press',alts:['Cable overhead press','Cable single-arm press']},
+    {n:'Cable lateral raise',m:'Cable machine — low pulley',s:3,r:'15',svg:'shoulder_press',alts:['Cable front raise','Cable Y-raise']},
+    {n:'Cable tricep pushdown',m:'Cable machine — rope',s:3,r:'10+drop',svg:'tricep_push',alts:['Cable overhead tricep extension','Cable single-arm pushdown']}
   ],
   pull:[
-    {n:'Lat pulldown',m:'Lat pulldown machine',s:4,r:'8–10',svg:'lat_pulldown',alts:['Weighted pull-up','Cable straight-arm pulldown','Single-arm dumbbell row']},
-    {n:'Seated row',m:'Cable row machine',s:4,r:'10',svg:'seated_row',alts:['Dumbbell bent-over row','Resistance band row','Inverted row (TRX)']},
-    {n:'Assisted pull-up',m:'Assisted pull-up machine',s:3,r:'10',svg:'pull_up',alts:['Negative pull-up (eccentric only)','Lat pulldown close-grip','Band-assisted pull-up']},
-    {n:'Rear delt fly',m:'Pec deck (reversed)',s:3,r:'15',svg:'pec_deck',alts:['Dumbbell rear delt fly','Cable face pull','Resistance band pull-apart']},
-    {n:'Bicep curl',m:'Cable curl',s:3,r:'10+drop',svg:'bicep_curl',alts:['Dumbbell curl','EZ bar curl (if available)','Resistance band curl']},
-    {n:'Hammer curl',m:'Cable (neutral grip)',s:3,r:'12',svg:'bicep_curl',alts:['Dumbbell hammer curl','Cross-body curl','Resistance band neutral curl']}
+    {n:'Cable pull-down',m:'Cable machine — high pulley (wide grip)',s:4,r:'8–10',svg:'lat_pulldown',alts:['Cable pull-down (close grip)','Cable straight-arm pulldown']},
+    {n:'Cable seated row',m:'Cable machine — low pulley',s:4,r:'10',svg:'seated_row',alts:['Cable single-arm row','Cable face pull']},
+    {n:'Cable pull-down (close grip)',m:'Cable machine — high pulley',s:3,r:'10',svg:'lat_pulldown',alts:['Cable single-arm pulldown','Cable straight-arm pulldown']},
+    {n:'Cable face pull',m:'Cable machine — rope at eye height',s:3,r:'15',svg:'pec_deck',alts:['Cable rear delt row','Cable pull-apart']},
+    {n:'Cable bicep curl',m:'Cable machine — low pulley',s:3,r:'10+drop',svg:'bicep_curl',alts:['Cable hammer curl','Cable single-arm curl']},
+    {n:'Cable hammer curl',m:'Cable machine — neutral rope',s:3,r:'12',svg:'bicep_curl',alts:['Cable cross-body curl','Cable concentration curl']}
   ],
   legs3:[
-    {n:'Leg press (heavy)',m:'Leg press machine',s:4,r:'8–10',svg:'leg_press',alts:['Barbell back squat','Hack squat','Smith machine squat']},
-    {n:'Leg extension',m:'Leg extension machine',s:4,r:'10+drop',svg:'leg_ext',alts:['Step-up with weights','Sissy squat','Wall sit with pulse']},
-    {n:'Hamstring curl',m:'Leg curl machine',s:4,r:'10+drop',svg:'leg_curl',alts:['Romanian deadlift','Swiss ball curl','Nordic curl']},
-    {n:'Hip abduction',m:'Abductor machine',s:3,r:'15',svg:'hip_abduction',alts:['Cable abduction','Band walk','Side-lying leg raise']},
-    {n:'Calf raise',m:'Standing calf raise',s:4,r:'15',svg:'calf_raise',alts:['Leg press calf press','Step calf raise','Single-leg calf raise']},
-    {n:'Ab crunch',m:'Ab crunch machine',s:3,r:'15',svg:'ab_crunch',alts:['Cable crunch','Plank','Hanging knee raise']}
+    {n:'Leg press (heavy)',m:'Leg press machine',s:4,r:'8–10',svg:'leg_press',alts:['Cable squat — heavyweight']},
+    {n:'Leg extension',m:'Leg extension machine',s:4,r:'10+drop',svg:'leg_ext',alts:['Cable leg extension','Step machine intervals 5 min']},
+    {n:'Leg curl',m:'Leg curl machine',s:4,r:'10+drop',svg:'leg_curl',alts:['Cable Romanian deadlift','Cable kickback']},
+    {n:'Cable hip abduction',m:'Cable machine — ankle cuff',s:3,r:'15',svg:'hip_abduction',alts:['Side step-ups on step machine','Lateral cable walk']},
+    {n:'Calf raise',m:'Leg press machine (toe press)',s:4,r:'15',svg:'calf_raise',alts:['Step machine — calf emphasis','Cable single-leg calf raise']},
+    {n:'Cable crunch',m:'Cable machine — kneeling',s:3,r:'15',svg:'ab_crunch',alts:['Cable wood chop','Plank','Dead bug']}
   ],
   full_adv:[
-    {n:'Leg press',m:'Leg press machine',s:3,r:'12',svg:'leg_press',alts:['Barbell squat','Goblet squat','Hack squat']},
-    {n:'Chest press',m:'Chest press machine',s:3,r:'12',svg:'chest_press',alts:['Dumbbell bench press','Push-up weighted','Cable press']},
-    {n:'Lat pulldown',m:'Lat pulldown',s:3,r:'12',svg:'lat_pulldown',alts:['Pull-up','Cable row','Dumbbell row']},
-    {n:'Shoulder press',m:'Shoulder press machine',s:3,r:'12',svg:'shoulder_press',alts:['Dumbbell press','Barbell press','Arnold press']},
-    {n:'Pec deck fly',m:'Pec deck machine',s:2,r:'12',svg:'pec_deck',alts:['Cable fly','Dumbbell fly','Band crossover']},
-    {n:'Seated row',m:'Cable row',s:3,r:'12',svg:'seated_row',alts:['Dumbbell row','Band row','TRX row']},
-    {n:'Leg curl',m:'Leg curl machine',s:3,r:'12',svg:'leg_curl',alts:['Romanian deadlift','Swiss ball curl','Nordic curl']},
-    {n:'Ab crunch',m:'Ab crunch machine',s:3,r:'15',svg:'ab_crunch',alts:['Cable crunch','Plank','Dead bug']}
+    {n:'Leg press',m:'Leg press machine',s:3,r:'12',svg:'leg_press',alts:['Cable squat']},
+    {n:'Chest press',m:'Chest press machine',s:3,r:'12',svg:'chest_press',alts:['Cable chest press','Cable fly']},
+    {n:'Cable pull-down',m:'Cable machine — high pulley',s:3,r:'12',svg:'lat_pulldown',alts:['Cable row','Cable straight-arm pulldown']},
+    {n:'Shoulder press',m:'Shoulder press machine',s:3,r:'12',svg:'shoulder_press',alts:['Cable overhead press','Cable lateral raise']},
+    {n:'Cable fly',m:'Cable machine',s:2,r:'12',svg:'pec_deck',alts:['Chest press machine — slow eccentric']},
+    {n:'Cable row',m:'Cable machine — low pulley',s:3,r:'12',svg:'seated_row',alts:['Cable face pull','Cable single-arm row']},
+    {n:'Leg curl',m:'Leg curl machine',s:3,r:'12',svg:'leg_curl',alts:['Cable kickback','Cable Romanian deadlift']},
+    {n:'Cable crunch',m:'Cable machine — kneeling',s:3,r:'15',svg:'ab_crunch',alts:['Plank','Dead bug']}
   ],
   pb_upper:[
-    {n:'Chest press (heavy)',m:'Chest press machine',s:4,r:'6–8',svg:'chest_press',alts:['Barbell bench press','Heavy dumbbell press','Smith machine press']},
-    {n:'Incline press',m:'Incline chest press',s:3,r:'8–10',svg:'incline_press',alts:['Dumbbell incline press','Cable upper chest','Incline Smith machine']},
-    {n:'Lat pulldown',m:'Lat pulldown',s:4,r:'6–8',svg:'lat_pulldown',alts:['Weighted pull-up','Cable row heavy','Single-arm cable row']},
-    {n:'Seated row (heavy)',m:'Cable row machine',s:3,r:'8–10',svg:'seated_row',alts:['Heavy dumbbell row','Barbell row','Machine row']},
-    {n:'Shoulder press',m:'Shoulder press machine',s:4,r:'8–10',svg:'shoulder_press',alts:['Barbell overhead press','Heavy dumbbell press','Arnold press']},
-    {n:'Tricep pushdown',m:'Cable rope',s:3,r:'10–12',svg:'tricep_push',alts:['Overhead extension','Dip machine','Close-grip push-up']},
-    {n:'Bicep curl',m:'Cable curl',s:3,r:'10–12',svg:'bicep_curl',alts:['EZ bar curl','Heavy dumbbell curl','Preacher curl']}
+    {n:'Chest press (heavy)',m:'Chest press machine',s:4,r:'6–8',svg:'chest_press',alts:['Cable chest press — heavy','Cable fly superset']},
+    {n:'Cable fly (heavy)',m:'Cable machine — chest height',s:3,r:'8–10',svg:'incline_press',alts:['Chest press machine — incline angle','Cable upper chest press']},
+    {n:'Cable pull-down (heavy)',m:'Cable machine — high pulley',s:4,r:'6–8',svg:'lat_pulldown',alts:['Cable row heavy','Cable single-arm pulldown']},
+    {n:'Cable row (heavy)',m:'Cable machine — low pulley',s:3,r:'8–10',svg:'seated_row',alts:['Cable face pull heavy','Cable single-arm row heavy']},
+    {n:'Shoulder press',m:'Shoulder press machine',s:4,r:'8–10',svg:'shoulder_press',alts:['Cable overhead press','Cable lateral raise — heavy']},
+    {n:'Cable tricep pushdown',m:'Cable machine — rope',s:3,r:'10–12',svg:'tricep_push',alts:['Cable overhead extension','Cable single-arm pushdown']},
+    {n:'Cable bicep curl',m:'Cable machine — low pulley',s:3,r:'10–12',svg:'bicep_curl',alts:['Cable hammer curl','Cable preacher curl']}
   ],
   pb_lower:[
-    {n:'Leg press (max)',m:'Leg press machine',s:5,r:'5–6',svg:'leg_press',alts:['Barbell back squat heavy','Hack squat','Smith machine squat']},
-    {n:'Leg extension',m:'Leg extension machine',s:3,r:'10–12',svg:'leg_ext',alts:['Step-up weighted','Sissy squat weighted','Spanish squat']},
-    {n:'Hamstring curl',m:'Leg curl machine',s:4,r:'8–10',svg:'leg_curl',alts:['Romanian deadlift heavy','Nordic curl','Glute-ham raise']},
-    {n:'Hip abduction',m:'Abductor machine',s:3,r:'15',svg:'hip_abduction',alts:['Cable abduction','Band walks','Side-lying weighted']},
-    {n:'Calf raise',m:'Standing calf raise machine',s:4,r:'12–15',svg:'calf_raise',alts:['Seated calf raise','Leg press calf','Donkey calf raise']},
-    {n:'Ab cable crunch',m:'Cable machine kneeling',s:4,r:'15',svg:'ab_crunch',alts:['Weighted crunch','Decline crunch','Hanging leg raise']}
+    {n:'Leg press (max)',m:'Leg press machine',s:5,r:'5–6',svg:'leg_press',alts:['Cable squat — heavy']},
+    {n:'Leg extension',m:'Leg extension machine',s:3,r:'10–12',svg:'leg_ext',alts:['Cable leg extension','Step machine sprint intervals']},
+    {n:'Leg curl (heavy)',m:'Leg curl machine',s:4,r:'8–10',svg:'leg_curl',alts:['Cable Romanian deadlift heavy','Cable kickback']},
+    {n:'Cable hip abduction',m:'Cable machine — ankle cuff',s:3,r:'15',svg:'hip_abduction',alts:['Lateral cable walk','Step machine — lateral emphasis']},
+    {n:'Calf raise',m:'Leg press machine (toe press)',s:4,r:'12–15',svg:'calf_raise',alts:['Step machine — calf press','Cable single-leg calf raise']},
+    {n:'Cable crunch',m:'Cable machine — kneeling',s:4,r:'15',svg:'ab_crunch',alts:['Cable wood chop','Weighted plank']}
   ]
 };
 
@@ -720,7 +741,7 @@ let S={
   /* per-tab week offsets (0=current, 1=next, 2=week after, -1=last week…) */
   wkWeek:0, mealWeek:0, stWeek:0, shopWeek:0,
   /* selected day slots per tab */
-  cDay:TODAY_SLOT, mType:'train', stTab:'wu', wkDay:TODAY_SLOT, stDay:TODAY_SLOT,
+  cDay:TODAY_SLOT, stTab:'wu', wkDay:TODAY_SLOT, stDay:TODAY_SLOT,
   _wkDayWeek:0, _cDayWeek:0, _stDayWeek:0
 };
 
@@ -774,7 +795,7 @@ function persist(){
 /* ═══ PHASE ═══ */
 function totalWk(){return Object.keys(S.wkDone).length;}
 function getPhase(){const t=totalWk();for(const p of[1,2,3,4,5,6]){if(t<PH[p].threshold)return p;}return 6;}
-function getCurW(){return S.wLog.length?S.wLog[0].val:98;}
+function getCurW(){return S.wLog.length?S.wLog[0].val:93.7;}
 function getExKey(ph,dow){const sp=PH[ph].split;if(sp==='full')return{1:'full',3:'full',5:'full'}[dow]||null;if(sp==='upper_lower')return{1:'upper',3:'lower',5:'upper'}[dow]||null;if(sp==='push_pull_legs')return{1:'push',3:'pull',5:'legs3'}[dow]||null;if(sp==='full_adv')return{1:'full_adv',3:'full_adv',5:'full_adv'}[dow]||null;if(sp==='powerbuilding')return{1:'pb_upper',2:'pb_lower',4:'pb_upper',5:'pb_lower'}[dow]||null;return null;}
 function getDayType(ph,dow){const ek=getExKey(ph,dow);if(ek)return'strength';if([2,4].includes(dow))return'cardio';return'rest';}
 
@@ -798,6 +819,91 @@ function nav(name){
 }
 
 /* ═══ TODAY ═══ */
+/* ═══ CALORIE & MACRO TRACKER ═══ */
+function getTodayKey(){
+  const d=new Date();
+  return`macros_${d.getFullYear()}_${d.getMonth()}_${d.getDate()}`;
+}
+function getTodayMacros(){return ld(getTodayKey(),{cal:0,protein:0,carbs:0,fat:0,meals:[]});}
+function setTodayMacros(m){sv(getTodayKey(),m);}
+
+function addMealToTracker(meal){
+  const m=getTodayMacros();
+  m.cal+=(meal.calories||0);
+  m.protein+=(meal.protein||0);
+  m.carbs+=(meal.carbs||0);
+  m.fat+=(meal.fat||0);
+  if(meal.name)m.meals.push(meal.name);
+  setTodayMacros(m);
+  renderMacroTracker();
+  renderToday&&renderToday();
+}
+
+function renderMacroTracker(){
+  const macroEl=document.getElementById('macro-tracker');
+  const calEl=document.getElementById('cal-tracker');
+  if(!macroEl||!calEl)return;
+  const ph=getPhase();const p=PH[ph];const dow=new Date().getDay();
+  const type=getDayType(ph,dow);
+  const isTraining=type==='training';
+  const targetCal=isTraining?p.tKcal:p.rKcal;
+  const targetP=isTraining?p.tP:p.rP;
+  const targetC=isTraining?p.tC:p.rC;
+  const targetF=isTraining?p.tF:p.rF;
+
+  const consumed=getTodayMacros();
+  const burn=calcBurnToday();
+
+  /* Macro bars */
+  function macroBar(label,eaten,target,color){
+    const pct=Math.min(100,Math.round(eaten/target*100));
+    const over=eaten>target;
+    return`<div style="margin-bottom:10px">
+      <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:3px">
+        <span style="font-weight:600">${label}</span>
+        <span style="color:${over?'var(--c)':'var(--mt)'}">${eaten}g <span style="color:var(--ft)">/ ${target}g</span></span>
+      </div>
+      <div class="pw"><div class="pf" style="width:${pct}%;background:${over?'var(--c)':color};transition:width .4s"></div></div>
+    </div>`;
+  }
+
+  macroEl.innerHTML=`
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+      <span style="font-size:13px;font-weight:600">Macros consumed today</span>
+      <span style="font-size:11px;color:var(--mt)">${isTraining?'Training day':'Rest day'}</span>
+    </div>
+    ${macroBar('Protein',consumed.protein,targetP,'var(--g)')}
+    ${macroBar('Carbs',consumed.carbs,targetC,'var(--b)')}
+    ${macroBar('Fat',consumed.fat,targetF,'var(--a)')}
+    ${consumed.meals.length?`<div style="font-size:11px;color:var(--mt);margin-top:4px">Meals logged: ${consumed.meals.join(', ')}</div>`:'<div style="font-size:11px;color:var(--ft)">No meals logged yet. Tap "Mark cooked" on any meal.</div>'}
+  `;
+
+  /* Calorie balance */
+  const calIn=consumed.cal;
+  const calOut=burn.total;
+  const netCal=calIn-calOut;
+  const calPct=Math.min(100,Math.round(calIn/targetCal*100));
+  const deficit=calOut-calIn;
+  calEl.innerHTML=`
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">
+      <span style="font-size:13px;font-weight:600">Calorie balance</span>
+      <span style="font-size:12px;font-weight:600;color:${netCal>200?'var(--c)':netCal<-200?'var(--g)':'var(--tx)'}">${netCal>0?'+':''}${netCal} kcal net</span>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:10px;text-align:center">
+      <div style="background:var(--gl);border-radius:8px;padding:8px"><div style="font-size:15px;font-weight:700;color:var(--gd)">${calIn}</div><div style="font-size:11px;color:var(--gd)">eaten</div></div>
+      <div style="background:var(--bl);border-radius:8px;padding:8px"><div style="font-size:15px;font-weight:700;color:var(--bd)">${calOut}</div><div style="font-size:11px;color:var(--bd)">burned</div></div>
+      <div style="background:${netCal>0?'var(--cl)':'var(--gl)'};border-radius:8px;padding:8px"><div style="font-size:15px;font-weight:700;color:${netCal>0?'var(--cd)':'var(--gd)'}">${Math.abs(netCal)}</div><div style="font-size:11px;color:${netCal>0?'var(--cd)':'var(--gd)'}">kcal ${netCal>0?'surplus':'deficit'}</div></div>
+    </div>
+    <div style="margin-bottom:4px">
+      <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:3px">
+        <span>Eaten vs target (${targetCal} kcal)</span><span style="color:var(--mt)">${calPct}%</span>
+      </div>
+      <div class="pw"><div class="pf" style="width:${calPct}%;background:${calPct>105?'var(--c)':'var(--g)'};transition:width .4s"></div></div>
+    </div>
+    <div style="font-size:11px;color:var(--mt)">BMR: ${burn.bmr} kcal · Exercise: +${burn.exerciseBurn} kcal · Target: ${targetCal} kcal</div>
+  `;
+}
+
 function renderToday(){
   const ph=getPhase();const p=PH[ph];
   document.getElementById('phn').textContent=ph;
@@ -805,7 +911,7 @@ function renderToday(){
   document.getElementById('phb').style.background=p.bg;
   document.getElementById('phi').style.color=p.tc;
   document.getElementById('phi').innerHTML=`<strong>Phase ${ph} — ${p.label}</strong><br>${p.sub}`;
-  const cur=getCurW();const lost=Math.max(0,98-cur);const togo=Math.max(0,cur-70);
+  const cur=getCurW();const lost=Math.max(0,93.7-cur);const togo=Math.max(0,cur-70);
   const pct=Math.min(100,Math.round(lost/28*100));
   document.getElementById('tw').textContent=cur.toFixed(1);
   document.getElementById('tl').textContent=lost.toFixed(1);
@@ -813,7 +919,7 @@ function renderToday(){
   document.getElementById('tpct').textContent=pct+'%';
   document.getElementById('tbar').style.width=pct+'%';
   document.getElementById('goal-lbl').textContent=ph>=4?'Goal 70 kg ✓':'Goal 70 kg';
-  renderStreak();renderTodayCards();renderRecentBadges();
+  renderStreak();renderTodayCards();renderRecentBadges();renderMacroTracker();
 }
 function renderStreak(){
   let html='';
@@ -873,10 +979,91 @@ function renderWorkout(){renderWorkoutDayStrip();renderWorkoutForDay(S.wkDay);}
 function renderWorkoutForDay(slot){
   const ph=getPhase();const p=PH[ph];const dow=slotDow(slot);
   const type=getDayType(ph,dow);const dk=dKey(slot,S.wkWeek||0);const done=S.wkDone[dk];const cont=document.getElementById('wcont');
-  if(type==='rest'){cont.innerHTML=`<div class="card"><div style="font-weight:500;margin-bottom:4px">Rest day 🌿</div><div style="font-size:13px;color:var(--mt)">Recovery, hydration, and mobility. See the Stretch tab for the rest-day flow.</div></div>`;return;}
-  if(type==='cardio'){cont.innerHTML=`<div class="card"><div style="font-weight:500;margin-bottom:4px">Cardio — ${p.cType} 🚴</div><div style="font-size:13px;color:var(--mt);margin-bottom:10px">${p.cMin} min. Treadmill, elliptical, or rowing machine.</div>${done?'<span class="tag tg">✓ Completed</span>':`<button class="btn btn-p btn-f" onclick="markDone(${slot})">Mark complete</button>`}</div>`;return;}
+
+  /* ── Session time budget ── */
+  const warmupMin=7;const cooldownMin=5;
+  const restSec=parseInt((p.sub.match(/(\d+)s rest/)||['','90'])[1])||90;
+
+  if(type==='rest'){
+    cont.innerHTML=`
+      <div class="card"><div style="font-weight:500;margin-bottom:4px">Rest day 🌿</div><div style="font-size:13px;color:var(--mt)">Active recovery day. Do the mobility flow below.</div></div>
+      ${renderSessionSection('mob','🧘 Mobility flow',ST_DATA.mob,'var(--p)','var(--pl)')}
+      ${renderSessionSection('split','🦵 Splits progression',ST_DATA.split,'var(--b)','var(--bl)')}
+      ${renderSessionSection('back','🌉 Backbend progression',ST_DATA.back,'var(--c)','var(--cl)')}`;
+    return;
+  }
+
+  if(type==='cardio'){
+    const calBurn=Math.round(p.cMin*7.5);
+    cont.innerHTML=`
+      ${renderSessionSection('wu-c','🔥 Warm-up (7 min)',ST_DATA.wu,'var(--g)','var(--gl)')}
+      <div class="card" style="margin-bottom:8px">
+        <div style="font-weight:600;font-size:14px;margin-bottom:4px">🚴 Cardio — ${p.cType}</div>
+        <div style="font-size:13px;color:var(--mt);margin-bottom:6px">${p.cMin} min · ~${calBurn} kcal · choose any machine below</div>
+        <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px">
+          ${['Treadmill','Elliptical','Stationary Bike','Row Machine','Step Machine'].map(m=>`<span style="background:var(--bl);color:var(--bd);border-radius:6px;padding:3px 10px;font-size:12px">🏃 ${m}</span>`).join('')}
+        </div>
+        ${done?'<span class="tag tg">✓ Completed</span>':`<button class="btn btn-p btn-f" onclick="markDone(${slot})">Mark complete</button>`}
+      </div>
+      ${renderSessionSection('cd-c','❄️ Cool-down (5 min)',ST_DATA.cd,'var(--a)','var(--al)')}
+      ${renderSessionSection('mob-c','🧘 Mobility (optional)',ST_DATA.mob,'var(--p)','var(--pl)')}
+      ${renderSessionSection('split-c','🦵 Splits progression (optional)',ST_DATA.split,'var(--b)','var(--bl)')}
+      ${renderSessionSection('back-c','🌉 Backbend progression (optional)',ST_DATA.back,'var(--c)','var(--cl)')}`;
+    return;
+  }
+
+  /* ── Strength day ── */
   const exKey=getExKey(ph,dow);const exList=EX[exKey]||EX.full;
-  let html=`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px"><div><div style="font-size:14px;font-weight:600">Phase ${ph} — ${p.label}</div><div style="font-size:12px;color:var(--mt)">${p.sub}</div></div>${done?'<span class="tag tg">✓ Done</span>':''}</div>`;
+  const totalSets=exList.reduce((a,e)=>a+e.s,0);
+  const avgRepTime=35;
+  const strengthMin=Math.round((totalSets*(avgRepTime+restSec))/60);
+  const cardioMin=Math.min(15,Math.max(8,60-warmupMin-cooldownMin-strengthMin));
+  const totalMin=warmupMin+cardioMin+strengthMin+cooldownMin;
+  const overBudget=totalMin>62;
+  const estCalBurn=Math.round(strengthMin*5+cardioMin*8+warmupMin*3+cooldownMin*2);
+
+  let html=`
+  <div class="card" style="margin-bottom:10px">
+    <div style="font-size:13px;font-weight:600;margin-bottom:8px">⏱ 60-min session plan</div>
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;text-align:center;font-size:12px">
+      <div style="background:var(--gl);border-radius:8px;padding:6px 4px"><div style="font-weight:700;color:var(--gd)">${warmupMin}m</div><div style="color:var(--gd)">Warm-up</div></div>
+      <div style="background:var(--bl);border-radius:8px;padding:6px 4px"><div style="font-weight:700;color:var(--bd)">${cardioMin}m</div><div style="color:var(--bd)">Cardio</div></div>
+      <div style="background:var(--pl);border-radius:8px;padding:6px 4px"><div style="font-weight:700;color:var(--pd)">${strengthMin}m</div><div style="color:var(--pd)">Strength</div></div>
+      <div style="background:var(--al);border-radius:8px;padding:6px 4px"><div style="font-weight:700;color:var(--ad)">${cooldownMin}m</div><div style="color:var(--ad)">Cool-down</div></div>
+    </div>
+    <div style="margin-top:8px;font-size:12px;color:var(--mt);display:flex;justify-content:space-between">
+      <span>Est. total: <strong style="color:${overBudget?'var(--c)':'var(--tx)'}">${totalMin} min</strong></span>
+      <span>Est. burn: <strong>~${estCalBurn} kcal</strong></span>
+    </div>
+    ${overBudget?`<div style="font-size:11px;color:var(--c);margin-top:4px">⚠ Over 60 min — reduce cardio to 8 min or drop 1 exercise.</div>`:''}
+  </div>
+
+  <!-- WARM-UP -->
+  ${renderSessionSection('wu-s','🔥 Warm-up (7 min)',ST_DATA.wu,'var(--g)','var(--gl)')}
+
+  <!-- CARDIO -->
+  <div class="card" style="margin-bottom:8px" id="sec-cardio">
+    <div style="display:flex;align-items:center;justify-content:space-between;cursor:pointer" onclick="togWkSec('cardio')">
+      <div style="display:flex;align-items:center;gap:8px">
+        <span style="font-size:16px">🚴</span>
+        <div><div style="font-weight:600;font-size:14px">Cardio (${cardioMin} min)</div><div style="font-size:12px;color:var(--mt)">${p.cType}</div></div>
+      </div>
+      <span id="ar-cardio" style="color:var(--mt);font-size:18px">›</span>
+    </div>
+    <div id="bd-cardio" style="display:none;margin-top:10px;border-top:.5px solid var(--br);padding-top:10px">
+      <div style="font-size:13px;color:var(--mt);margin-bottom:8px">Pick any machine and aim for <strong>${cardioMin} min</strong> at moderate intensity (RPE 6–7/10). Keep your heart rate up but still able to hold a conversation.</div>
+      <div style="display:flex;flex-wrap:wrap;gap:6px">
+        ${['🏃 Treadmill — incline walk or jog','🔄 Elliptical — steady pace','🚲 Stationary Bike — moderate resistance','🚣 Row Machine — 500m intervals','🪜 Step Machine — steady climb'].map(m=>`<div style="background:var(--bl);color:var(--bd);border-radius:8px;padding:5px 10px;font-size:12px;width:100%">${m}</div>`).join('')}
+      </div>
+    </div>
+  </div>
+
+  <!-- STRENGTH -->
+  <div style="display:flex;justify-content:space-between;align-items:center;margin:12px 0 8px">
+    <div><div style="font-size:14px;font-weight:600">💪 Strength — Phase ${ph} ${p.label}</div><div style="font-size:12px;color:var(--mt)">${p.sub}</div></div>
+    ${done?'<span class="tag tg">✓ Done</span>':''}
+  </div>`;
+
   exList.forEach((ex,ei)=>{
     const key=`${dk}_${exKey}_${ei}`;
     const altHtml=ex.alts?`<div class="alt-box"><div class="alt-title">Machine not available? Try:</div>${ex.alts.map(a=>`<div class="alt-item"><div class="alt-dot"></div><span>${a}</span></div>`).join('')}</div>`:'';
@@ -892,13 +1079,85 @@ function renderWorkoutForDay(slot){
       <div class="ex-bd"><div class="ex-bd-inner">${sets}${altHtml}</div></div>
     </div>`;
   });
+
+  /* COOL-DOWN */
+  html+=renderSessionSection('cd-s','❄️ Cool-down (5 min)',ST_DATA.cd,'var(--a)','var(--al)');
+  html+=renderSessionSection('mob-s','🧘 Mobility (optional)',ST_DATA.mob,'var(--p)','var(--pl)');
+  html+=renderSessionSection('split-s','🦵 Splits progression (optional)',ST_DATA.split,'var(--b)','var(--bl)');
+  html+=renderSessionSection('back-s','🌉 Backbend progression (optional)',ST_DATA.back,'var(--c)','var(--cl)');
+
   if(!done)html+=`<button class="btn btn-p btn-f" style="margin-top:12px" onclick="markDone(${dow})">✓ Mark workout complete</button>`;
   cont.innerHTML=html;
 }
+
+/* ── Renders a collapsible warm-up / cool-down / mobility section ── */
+function renderSessionSection(id,title,exercises,color,bg){
+  const items=exercises.map((ex,i)=>`
+    <div style="display:flex;gap:10px;padding:8px 0;border-bottom:.5px solid var(--br);align-items:flex-start">
+      <div style="width:36px;height:36px;border-radius:8px;background:${bg};display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0">${ex.i||'⬤'}</div>
+      <div style="flex:1">
+        <div style="font-size:13px;font-weight:600;color:var(--tx)">${ex.n}</div>
+        <div style="font-size:12px;color:${color};font-weight:500">${ex.d}</div>
+        <div style="font-size:12px;color:var(--mt);margin-top:2px;line-height:1.4">${ex.how}</div>
+      </div>
+    </div>`).join('');
+  return`<div class="card" style="margin-bottom:8px">
+    <div style="display:flex;align-items:center;justify-content:space-between;cursor:pointer" onclick="togWkSec('${id}')">
+      <div style="font-weight:600;font-size:14px">${title}</div>
+      <span id="ar-${id}" style="color:var(--mt);font-size:18px">›</span>
+    </div>
+    <div id="bd-${id}" style="display:none;margin-top:10px;border-top:.5px solid var(--br);padding-top:6px">${items}</div>
+  </div>`;
+}
+
+function togWkSec(id){
+  const bd=document.getElementById('bd-'+id);
+  const ar=document.getElementById('ar-'+id);
+  if(!bd)return;
+  const open=bd.style.display==='block';
+  bd.style.display=open?'none':'block';
+  if(ar)ar.textContent=open?'›':'⌄';
+}
+
 function togEx(i){const c=document.getElementById('exc-'+i);c.classList.toggle('op');}
 function saveSet(k,v){S.setD[k]=v;persist();}
 function togSet(k,el){S.setD[k]=!S.setD[k];el.classList.toggle('dn',S.setD[k]);persist();}
-function markDone(slot){const dk=dKey(slot,S.wkWeek||0);S.wkDone[dk]=true;persist();checkBadges();toast('💪 Session complete!');renderWorkout();renderToday();}
+
+/* Calorie burn estimate: BMR (183cm,37yo) + activity */
+function calcBurnToday(){
+  const ph=getPhase();const p=PH[ph];const cur=getCurW();
+  /* Mifflin-St Jeor BMR for male */
+  const bmr=Math.round(10*cur+6.25*183-5*37+5);
+  const bmrPerHour=Math.round(bmr/24);
+  /* Check if any workout was done today */
+  const todaySlot=TODAY_SLOT;
+  const dk=dKey(todaySlot,S.wkWeek||0);
+  const wDone=S.wkDone[dk];
+  const dow=slotDow(todaySlot);
+  const type=getDayType(ph,dow);
+  let exerciseBurn=0;
+  if(wDone){
+    const exKey=getExKey(ph,dow);
+    const exList=EX[exKey]||EX.full;
+    const restSec=parseInt((p.sub.match(/(\d+)s rest/)||['','90'])[1])||90;
+    const totalSets=exList.reduce((a,e)=>a+e.s,0);
+    const strengthMin=Math.round((totalSets*(35+restSec))/60);
+    const cardioMin=Math.min(15,Math.max(10,60-7-5-strengthMin));
+    exerciseBurn=Math.round(strengthMin*5+cardioMin*8+7*3+5*2);
+  } else if(type==='cardio'&&S.wkDone[dk]){
+    exerciseBurn=Math.round(p.cMin*7.5);
+  }
+  return{bmr,bmrPerHour,exerciseBurn,total:bmr+exerciseBurn};
+}
+
+function markDone(slot){
+  const dk=dKey(slot,S.wkWeek||0);
+  S.wkDone[dk]=true;persist();checkBadges();
+  logWorkoutComplete(slot);
+  const burn=calcBurnToday();
+  toast(`💪 Session complete! ~${burn.exerciseBurn} kcal burned`);
+  renderWorkout();renderToday();
+}
 
 /* ═══ STRETCH ═══ */
 function stTab(t){
@@ -1016,10 +1275,8 @@ function setMealView(v){
   ['meals','prep','favs'].forEach(x=>{
     const b=document.getElementById('mv-'+x);if(b)b.classList.toggle('btn-p',x===v);
   });
-  const mtr=document.getElementById('meal-type-row');
   const ma=document.getElementById('meal-actions');
   const mcont=document.getElementById('mcont');
-  if(mtr)mtr.style.display=v==='meals'?'flex':'none';
   if(ma)ma.style.display=v==='favs'?'none':'flex';
   if(mcont)mcont.style.display='block';
   renderMealContent();
@@ -1053,12 +1310,9 @@ function renderMealDayStrip(){
 }
 function changeMealWeek(d){S.mealWeek=(S.mealWeek||0)+d;S.cDay=isToday(new Date().getDay(),S.mealWeek)?new Date().getDay():0;S._cDayWeek=S.mealWeek;renderMeals();}
 function selMDay(i){S.cDay=i;S._cDayWeek=S.mealWeek||0;renderMealDayStrip();renderMealContent();}
-function mType(t){S.mType=t;document.getElementById('mtt').classList.toggle('btn-p',t==='train');document.getElementById('mtr').classList.toggle('btn-p',t==='rest');renderMealContent();}
 
 function renderMeals(){
   renderMealDayStrip();
-  document.getElementById('mtt').classList.toggle('btn-p',S.mType==='train');
-  document.getElementById('mtr').classList.toggle('btn-p',S.mType!=='train');
   renderPhaseCalInfo();
   setMealView(S_mealView);
 }
@@ -1101,7 +1355,7 @@ function renderMealContent(){
   const dn=DAY_NAMES[S.cDay];
   const dp=plan[dn];
   if(!dp){document.getElementById('mcont').innerHTML='<div style="font-size:13px;color:var(--mt)">No plan for this day.</div>';return;}
-  const meals=(S.mType==='train'?dp.training:dp.rest)||dp.training||dp.rest||[];
+  const meals=dp.training||dp.rest||[];
   const tk=meals.reduce((a,m)=>a+(m.calories||0),0);const tp=meals.reduce((a,m)=>a+(m.protein||0),0);
   let html=`<div class="mgrid"><div class="mc"><div class="mv">${tk}</div><div class="ml">kcal</div></div><div class="mc"><div class="mv">${tp}g</div><div class="ml">protein</div></div><div class="mc"><div class="mv">${meals.length}</div><div class="ml">meals</div></div></div>`;
   meals.forEach((m,mi)=>{
@@ -1188,7 +1442,7 @@ function renderSundayPrep(wo){
     </div>`:'';
     html+=`<div class="mlc" style="margin-bottom:8px" id="prepcard-${ti}">
       <div style="display:flex;align-items:flex-start;gap:10px">
-        <div class="shcb${done?' on':''}" onclick="togPrepTask('${k}');event.stopPropagation()" style="flex-shrink:0;margin-top:2px">✓</div>
+        <div class="shcb${done?' on':''}" onclick="togPrepTask(event,'${k}')" style="flex-shrink:0;margin-top:2px">✓</div>
         <div style="flex:1">
           <div style="font-size:14px;font-weight:600;${done?'text-decoration:line-through;color:var(--mt)':'color:var(--tx)'}">${task.task}</div>
           ${task.note?`<div style="font-size:12px;color:var(--mt);margin-top:2px">${task.note}</div>`:''}
@@ -1200,7 +1454,8 @@ function renderSundayPrep(wo){
   });
   document.getElementById('mcont').innerHTML=html;
 }
-function togPrepTask(k){
+function togPrepTask(e,k){
+  e&&e.stopPropagation();
   S.stDone[k]=!S.stDone[k];persist();
   if(S.stDone[k]){
     const wo=S.mealWeek||0;
@@ -1564,15 +1819,18 @@ function deductMealFromPantry(meal,wo){
   setPantry(wo,p);
 }
 
-/* Mark a meal as cooked — auto-deducts ingredients from pantry */
+/* Mark a meal as cooked — auto-deducts ingredients from pantry and logs macros */
 function markMealCooked(day,mealIdx){
   const wo=S.mealWeek||0;const plan=getMealPlan(wo);if(!plan)return;
   const dp=plan[day];if(!dp)return;
   const meals=dp.training||dp.rest||[];const meal=meals[mealIdx];if(!meal)return;
   meal.cooked=true;
   deductMealFromPantry(meal,wo);
+  /* Log macros to today's tracker if this is today */
+  const todayName=DAY_NAMES[new Date().getDay()];
+  if(day===todayName){addMealToTracker(meal);}
   setMealPlan(wo,plan);
-  toast(`✓ ${meal.name} cooked — pantry updated`);
+  toast(`✓ ${meal.name} cooked — pantry & macros updated`);
   renderMealContent();
 }
 
@@ -1889,7 +2147,7 @@ ${freshNonStaple.map(fmtItem).map(x=>`  * ${x}`).join('\n')}
   document.getElementById('mcont').innerHTML=`<div class="ail"><div class="spin"></div><div class="aim">Step 1/2 — Building meal plan from pantry…</div></div>`;
 
   const planPrompt=`You are a professional chef and sports nutritionist (NYT Cooking / Molly Baz / Alison Roman style). Create a 7-day meal plan:
-- 37yo male, 183cm, ${cur.toFixed(1)}kg, started 98kg, goal 70kg
+- 37yo male, 183cm, ${cur.toFixed(1)}kg, started 93.7kg, goal 70kg
 - Phase ${ph}: ${p.label} — ${p.goal}. ${p.note}
 - Calories: Training days (Mon/Wed/Fri) ${p.tKcal}kcal P${p.tP}g C${p.tC}g F${p.tF}g | Rest days ${p.rKcal}kcal P${p.rP}g C${p.rC}g F${p.rF}g
 - ${isMaint?'MAINTENANCE/SURPLUS':'FAT LOSS'} phase
@@ -1906,8 +2164,11 @@ RULES:
 8. BREAKFAST/SNACKS/PRE-WORKOUT ≤10 min. No weekday morning cooking.
 9. FULL DETAIL: Every meal lists ALL ingredients with exact quantities and seasonings including specialty items (harissa, tahini, cheese, fresh herbs, butter, honey etc.).
 10. CHEF QUALITY: Name dishes like NYT Cooking. E.g. "Harissa chicken thigh rice bowl", "Crispy chickpeas with feta".
-11. PANTRY AFTER: For every pantry item, state remaining quantity after the week. Fresh remainder → freeze:true.
-12. SUNDAY PREP: One task per distinct preparation. Every batch item in any weekday meal must have its own prep task. Include freeze tasks for remaining perishables.
+11. COST EFFECTIVE — MINIMAL INGREDIENT LIST: Design the week around a SMALL set of core ingredients that appear across multiple meals. Aim for no more than 8–10 distinct fresh/protein items for the whole week. A whole chicken, a bag of lentils, and two types of veg should carry 4–5 different meals. Avoid one-off ingredients used in only a single meal.
+12. INGREDIENT OVERLAP: Every non-pantry ingredient purchased should ideally appear in at least 2 meals. E.g. if you buy feta, it should appear in both a lunch and a dinner. If you buy spinach, it appears in 3 meals across the week. Flag in your planning: "this ingredient covers meals X, Y, Z".
+13. SIMPLE COOKING METHODS: Prioritise one-pan, sheet-pan and batch-pot cooking. Avoid recipes requiring many pots, specialist equipment or long techniques. Every dinner should be achievable with a single hob or oven tray.
+14. PANTRY AFTER: For every pantry item, state remaining quantity after the week. Fresh remainder → freeze:true.
+15. SUNDAY PREP: One task per distinct preparation. Every batch item in any weekday meal must have its own prep task. Include freeze tasks for remaining perishables.
 
 Return ONLY valid JSON — NO steps[] yet, those come in a second pass:
 {"Sunday":{"type":"rest","rest":[{"time":"Breakfast","name":"...","detail":"exact ingredients + quantities + seasonings","calories":0,"protein":0,"carbs":0,"fat":0},{"time":"Mid-morning","name":"...","detail":"...","calories":0,"protein":0,"carbs":0,"fat":0},{"time":"Lunch","name":"...","detail":"...","calories":0,"protein":0,"carbs":0,"fat":0},{"time":"Snack","name":"...","detail":"...","calories":0,"protein":0,"carbs":0,"fat":0},{"time":"Dinner","name":"...","detail":"...","calories":0,"protein":0,"carbs":0,"fat":0}]},"Monday":{"type":"training","training":[{"time":"Breakfast","name":"...","detail":"...","calories":0,"protein":0,"carbs":0,"fat":0},{"time":"Mid-morning","name":"...","detail":"...","calories":0,"protein":0,"carbs":0,"fat":0},{"time":"Pre-workout","name":"...","detail":"...","calories":0,"protein":0,"carbs":0,"fat":0},{"time":"Lunch","name":"...","detail":"...","calories":0,"protein":0,"carbs":0,"fat":0},{"time":"Dinner","name":"...","detail":"...","calories":0,"protein":0,"carbs":0,"fat":0}]},"Tuesday":{"type":"rest","rest":[...]},"Wednesday":{"type":"training","training":[...]},"Thursday":{"type":"rest","rest":[...]},"Friday":{"type":"training","training":[...]},"Saturday":{"type":"rest","rest":[...]},"_sundayPrep":[{"task":"Harissa chicken thighs","note":"Yields 4×180g. Used Mon/Wed/Fri lunches. Keep 4 days fridge.","steps":["Preheat oven 200°C fan.","Mix 3 tbsp (45g) harissa, 2 tbsp (30ml) olive oil, 1 tsp cumin, ½ tsp salt.","Coat 720g chicken thighs. Marinate 15 min.","Roast 25 min until 75°C internal. Rest 5 min.","Divide into 4×180g portions. Refrigerate in labelled containers."]}],"_pantryAfter":[{"name":"Chicken thighs","remaining":"0g","freeze":false,"note":"Used 180g Mon/Wed/Fri lunch + Tue dinner"},{"name":"Bananas","remaining":"1","freeze":false,"note":"5 used across week, 1 remaining"}]}`;
@@ -2070,7 +2331,7 @@ Return ONLY JSON array in same order:
 async function genSingleRecipe(mi){
   const wo=S.mealWeek||0;const plan=getMealPlan(wo);
   const dn=DAY_NAMES[S.cDay];const dp=plan&&plan[dn];if(!dp)return;
-  const meals=(S.mType==='train'?dp.training:dp.rest)||dp.training||dp.rest||[];
+  const meals=dp.training||dp.rest||[];
   const m=meals[mi];if(!m)return;
   const btn=document.querySelector(`#mlc-${mi} button`);if(btn){btn.disabled=true;btn.textContent='…';}
   try{
@@ -2081,11 +2342,178 @@ async function genSingleRecipe(mi){
 }
 
 /* ═══ WEIGHT ═══ */
-let wch=null;
-function logW(){const v=parseFloat(document.getElementById('wi').value);if(isNaN(v)||v<40||v>250){toast('Enter a valid weight','warn');return;}const lbl=new Date().toLocaleDateString('en-GB',{day:'numeric',month:'short'});S.wLog.unshift({date:lbl,val:v});if(S.wLog.length>30)S.wLog=S.wLog.slice(0,30);document.getElementById('wi').value='';persist();checkBadges();renderToday();renderWeight();toast('⚖️ Weight logged!');}
-function renderWeight(){renderWHist();setTimeout(renderWChart,80);}
-function renderWHist(){const c=document.getElementById('whist');if(!S.wLog.length){c.innerHTML='<div style="font-size:13px;color:var(--mt)">No entries yet.</div>';return;}c.innerHTML=S.wLog.map((w,i)=>{let delta='';if(i<S.wLog.length-1){const d=w.val-S.wLog[i+1].val;delta=`<span style="color:${d<=0?'var(--g)':'var(--c)'};font-weight:600">${d>0?'+':''}${d.toFixed(1)} kg</span>`;}return`<div class="whi"><span style="color:var(--mt)">${w.date}</span><span style="font-family:'DM Mono',monospace;font-weight:600">${w.val.toFixed(1)} kg</span>${delta}</div>`;}).join('');}
-function renderWChart(){const canvas=document.getElementById('wChart');if(!canvas)return;if(wch){wch.destroy();wch=null;}const logs=[...S.wLog].reverse();const isDark=matchMedia('(prefers-color-scheme:dark)').matches;const tc=isDark?'#999995':'#6B6B67';const gc=isDark?'rgba(255,255,255,.06)':'rgba(0,0,0,.06)';const labels=logs.length?logs.map(w=>w.date):['Start','Now'];const vals=logs.length?logs.map(w=>w.val):[98,98];const maxY=Math.max(100,Math.ceil((vals[vals.length-1]||98)/5)*5+5);wch=new Chart(canvas,{type:'line',data:{labels,datasets:[{label:'Weight',data:vals,borderColor:'#1D9E75',pointBackgroundColor:'#1D9E75',pointRadius:4,tension:.3,fill:false,borderWidth:2},{label:'Goal',data:Array(labels.length).fill(70),borderColor:'#D85A30',borderDash:[4,4],pointRadius:0,fill:false,borderWidth:1.5}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{min:65,max:maxY,ticks:{color:tc,font:{size:11}},grid:{color:gc}},x:{ticks:{color:tc,font:{size:10},maxRotation:45},grid:{display:false}}}}});}
+function logW(){
+  const v=parseFloat(document.getElementById('wi').value);
+  if(isNaN(v)||v<40||v>250){toast('Enter a valid weight','warn');return;}
+  const lbl=new Date().toLocaleDateString('en-GB',{day:'numeric',month:'short'});
+  S.wLog.unshift({date:lbl,val:v});
+  if(S.wLog.length>60)S.wLog=S.wLog.slice(0,60);
+  document.getElementById('wi').value='';
+  persist();checkBadges();renderToday();renderWeight();toast('⚖️ Weight logged!');
+}
+
+/* ── Fitness log ── */
+function getFitnessLog(){return ld('fitnessLog',[]);}
+function saveFitnessLog(l){sv('fitnessLog',l);}
+function logFitnessEvent(type,data){
+  const log=getFitnessLog();
+  const date=new Date().toLocaleDateString('en-GB',{day:'numeric',month:'short'});
+  log.unshift({date,type,...data});
+  if(log.length>200)log.splice(200);
+  saveFitnessLog(log);
+}
+function logWorkoutComplete(slot){
+  const ph=getPhase();const p=PH[ph];const dow=slotDow(slot);
+  const type=getDayType(ph,dow);
+  if(type==='cardio'){
+    logFitnessEvent('cardio',{duration:p.cMin,machine:p.cType,phase:ph});
+  } else if(type==='strength'){
+    const exKey=getExKey(ph,dow);const exList=EX[exKey]||EX.full;
+    const dk=dKey(slot,S.wkWeek||0);
+    let totalVol=0;let totalSets=0;
+    exList.forEach((ex,ei)=>{
+      for(let s=0;s<ex.s;s++){
+        const sk=`${dk}_${exKey}_${ei}_s${s}`;
+        const kg=parseFloat(S.setD[sk+'_kg'])||0;
+        const rep=parseFloat(S.setD[sk+'_r'])||0;
+        if(kg>0&&rep>0){totalVol+=kg*rep;totalSets++;}
+      }
+    });
+    logFitnessEvent('strength',{phase:ph,split:exKey,totalVol:Math.round(totalVol),sets:totalSets,exercises:exList.length});
+  }
+}
+
+/* ── Progress tabs ── */
+let S_progView='weight';
+let fitCharts={};
+function setProgView(v){
+  S_progView=v;
+  ['weight','strength','cardio','stretch'].forEach(x=>{
+    const b=document.getElementById('prog-'+x);
+    if(b)b.classList.toggle('btn-p',x===v);
+  });
+  renderProgContent();
+}
+function renderWeight(){if(S_progView==='weight')renderProgContent();}
+
+function renderProgContent(){
+  const cont=document.getElementById('prog-cont');if(!cont)return;
+  Object.values(fitCharts).forEach(ch=>{try{ch.destroy();}catch(_){}});fitCharts={};
+  const isDark=matchMedia('(prefers-color-scheme:dark)').matches;
+  const tc=isDark?'#999995':'#6B6B67';const gc=isDark?'rgba(255,255,255,.06)':'rgba(0,0,0,.06)';
+
+  if(S_progView==='weight'){
+    cont.innerHTML=`
+      <div class="wr"><input type="number" id="wi" placeholder="e.g. 91.5 kg" step="0.1" min="40" max="250"><button class="btn btn-p" onclick="logW()">Log</button></div>
+      <div class="slbl">Weight chart</div>
+      <div class="card"><div class="cwrap"><canvas id="wChart"></canvas></div></div>
+      <div class="slbl">History</div><div class="card" id="whist"></div>`;
+    renderWHist();setTimeout(renderWChart,80);return;
+  }
+
+  const log=getFitnessLog();
+  const daysOn=daysSinceStart();
+
+  if(S_progView==='strength'){
+    const sLog=log.filter(e=>e.type==='strength').slice(0,30).reverse();
+    const totalWorkouts=Object.keys(S.wkDone).length;
+    const totalVol=sLog.reduce((a,e)=>a+(e.totalVol||0),0);
+    const lastSess=sLog.length?sLog[sLog.length-1]:null;
+    cont.innerHTML=`
+      <div class="mgrid" style="margin-bottom:12px">
+        <div class="mc"><div class="mv">${totalWorkouts}</div><div class="ml">workouts done</div></div>
+        <div class="mc"><div class="mv">${sLog.length}</div><div class="ml">strength sessions</div></div>
+        <div class="mc"><div class="mv">${Math.round(totalVol/1000)}k</div><div class="ml">kg total vol</div></div>
+      </div>
+      ${sLog.length<2?`<div class="card" style="font-size:13px;color:var(--mt)">Complete at least 2 strength sessions to see progression. Log weights in each exercise set to track volume. 💪</div>`:`<div class="slbl">Training volume per session (kg)</div><div class="card"><div class="cwrap"><canvas id="strengthChart"></canvas></div></div>`}
+      <div class="slbl">Last session</div>
+      <div class="card" style="font-size:13px;color:var(--mt)">${lastSess?`<strong>${lastSess.date}</strong> · ${lastSess.split||'strength'} · ${lastSess.totalVol||0}kg total vol · ${lastSess.sets||0} sets logged`:'No sessions yet — mark a workout complete to start tracking.'}</div>`;
+    if(sLog.length>=2){
+      setTimeout(()=>{
+        const canvas=document.getElementById('strengthChart');if(!canvas)return;
+        fitCharts.strength=new Chart(canvas,{type:'bar',data:{labels:sLog.map(e=>e.date),datasets:[{label:'Volume (kg)',data:sLog.map(e=>e.totalVol||0),backgroundColor:'#534AB755',borderColor:'#534AB7',borderWidth:2,borderRadius:4}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{ticks:{color:tc},grid:{color:gc}},x:{ticks:{color:tc,font:{size:10},maxRotation:45},grid:{display:false}}}}});
+      },80);
+    }
+    return;
+  }
+
+  if(S_progView==='cardio'){
+    const cLog=log.filter(e=>e.type==='cardio').slice(0,30).reverse();
+    const totalMin=cLog.reduce((a,e)=>a+(e.duration||0),0);
+    const avgMin=cLog.length?Math.round(totalMin/cLog.length):0;
+    cont.innerHTML=`
+      <div class="mgrid" style="margin-bottom:12px">
+        <div class="mc"><div class="mv">${cLog.length}</div><div class="ml">cardio sessions</div></div>
+        <div class="mc"><div class="mv">${totalMin}</div><div class="ml">total minutes</div></div>
+        <div class="mc"><div class="mv">${avgMin}</div><div class="ml">avg min/session</div></div>
+      </div>
+      ${cLog.length<2?`<div class="card" style="font-size:13px;color:var(--mt)">Complete at least 2 cardio sessions to see your chart. 🚴</div>`:`<div class="slbl">Cardio duration per session (min)</div><div class="card"><div class="cwrap"><canvas id="cardioChart"></canvas></div></div>`}
+      <div class="slbl">Session log</div>
+      <div class="card" id="cardioHist"></div>`;
+    const hist=document.getElementById('cardioHist');
+    if(hist)hist.innerHTML=cLog.length?[...cLog].reverse().slice(0,10).map(e=>`<div class="whi"><span style="color:var(--mt)">${e.date}</span><span>${e.duration}min · ${e.machine||'cardio'}</span></div>`).join(''):'<div style="font-size:13px;color:var(--mt)">No sessions yet.</div>';
+    if(cLog.length>=2){
+      setTimeout(()=>{
+        const canvas=document.getElementById('cardioChart');if(!canvas)return;
+        fitCharts.cardio=new Chart(canvas,{type:'line',data:{labels:cLog.map(e=>e.date),datasets:[{label:'Duration (min)',data:cLog.map(e=>e.duration||0),borderColor:'#378ADD',backgroundColor:'#378ADD22',pointBackgroundColor:'#378ADD',pointRadius:4,tension:.3,fill:true,borderWidth:2}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{min:0,ticks:{color:tc},grid:{color:gc}},x:{ticks:{color:tc,font:{size:10},maxRotation:45},grid:{display:false}}}}});
+      },80);
+    }
+    return;
+  }
+
+  if(S_progView==='stretch'){
+    const ss=S.stretchSessions;
+    let html=`<div class="mgrid" style="margin-bottom:12px">
+      <div class="mc"><div class="mv">${ss}</div><div class="ml">total sessions</div></div>
+      <div class="mc"><div class="mv">${daysOn}</div><div class="ml">days active</div></div>
+      <div class="mc"><div class="mv">${ss>0?Math.round(daysOn/ss*10)/10:'—'}</div><div class="ml">days/session</div></div>
+    </div><div class="slbl">Goal progression</div>`;
+    STRETCH_GOALS.forEach(g=>{
+      const curLvl=g.levels.findIndex(l=>ss<l.sessions);
+      const lvlIdx=curLvl===-1?g.levels.length-1:curLvl;
+      const lvl=g.levels[lvlIdx];
+      const prevSessions=lvlIdx>0?g.levels[lvlIdx-1].sessions:0;
+      const progress=Math.min(100,Math.round((ss-prevSessions)/Math.max(1,(lvl.sessions-prevSessions))*100));
+      html+=`<div class="card" style="margin-bottom:8px">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+          <span style="font-size:18px">${g.icon}</span>
+          <div style="flex:1"><div style="font-weight:600;font-size:14px">${g.name}</div><div style="font-size:12px;color:var(--mt)">Level ${lvlIdx+1}/6 — ${lvl.name}</div></div>
+          <span style="font-size:12px;font-weight:600;color:var(--g)">${progress}%</span>
+        </div>
+        <div class="pw"><div class="pf" style="width:${progress}%;background:var(--p)"></div></div>
+        <div style="font-size:12px;color:var(--mt);margin-top:5px">${lvl.desc}</div>
+      </div>`;
+    });
+    cont.innerHTML=html;return;
+  }
+}
+
+function renderWHist(){
+  const c=document.getElementById('whist');if(!c)return;
+  if(!S.wLog.length){c.innerHTML='<div style="font-size:13px;color:var(--mt)">No entries yet.</div>';return;}
+  c.innerHTML=S.wLog.map((w,i)=>{
+    let delta='';
+    if(i<S.wLog.length-1){const d=w.val-S.wLog[i+1].val;delta=`<span style="color:${d<=0?'var(--g)':'var(--c)'};font-weight:600">${d>0?'+':''}${d.toFixed(1)} kg</span>`;}
+    return`<div class="whi"><span style="color:var(--mt)">${w.date}</span><span style="font-family:'DM Mono',monospace;font-weight:600">${w.val.toFixed(1)} kg</span>${delta}</div>`;
+  }).join('');
+}
+function renderWChart(){
+  const canvas=document.getElementById('wChart');if(!canvas)return;
+  if(fitCharts.weight){try{fitCharts.weight.destroy();}catch(_){}}
+  const logs=[...S.wLog].reverse();
+  const isDark=matchMedia('(prefers-color-scheme:dark)').matches;
+  const tc=isDark?'#999995':'#6B6B67';const gc=isDark?'rgba(255,255,255,.06)':'rgba(0,0,0,.06)';
+  const labels=logs.length?logs.map(w=>w.date):['Start','Now'];
+  const vals=logs.length?logs.map(w=>w.val):[93.7,93.7];
+  const maxY=Math.max(96,Math.ceil((Math.max(...vals)||93.7)/5)*5+3);
+  fitCharts.weight=new Chart(canvas,{type:'line',data:{labels,datasets:[
+    {label:'Weight',data:vals,borderColor:'#1D9E75',pointBackgroundColor:'#1D9E75',pointRadius:4,tension:.3,fill:false,borderWidth:2},
+    {label:'Goal 70kg',data:Array(labels.length).fill(70),borderColor:'#D85A30',borderDash:[4,4],pointRadius:0,fill:false,borderWidth:1.5},
+    {label:'Start 93.7kg',data:Array(labels.length).fill(93.7),borderColor:'#6B6B67',borderDash:[2,4],pointRadius:0,fill:false,borderWidth:1}
+  ]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{min:65,max:maxY,ticks:{color:tc,font:{size:11}},grid:{color:gc}},x:{ticks:{color:tc,font:{size:10},maxRotation:45},grid:{display:false}}}}});
+}
+
+
 
 /* ═══ SHOPPING ═══ */
 async function genShop(skipLoader,weekOffset){
@@ -2267,10 +2695,10 @@ function renderShop(){
       const k=cat+'_'+i;const tk=tx[k]||false;
       const name=item.item||item.name||'';const qty=item.qty||item.quantity||'';
       html+=`<div class="shi${tk?' tk':''}" style="display:flex;align-items:center;gap:10px">
-        <div class="shcb${tk?' on':''}" onclick="togShop('${k}');event.stopPropagation()">✓</div>
+        <div class="shcb${tk?' on':''}" onclick="togShop(event,'${k}')">✓</div>
         <span class="shn" style="flex:1">${name}</span>
         <span class="shq">${qty}</span>
-        <a href="${ocadoUrl(name)}" target="_blank" onclick="event.stopPropagation()" style="display:flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:8px;background:var(--bl);color:var(--bd);font-size:13px;font-weight:700;text-decoration:none;flex-shrink:0">↗</a>
+        <a href="${ocadoUrl(name)}" target="_blank" onclick="return false" style="display:flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:8px;background:var(--bl);color:var(--bd);font-size:13px;font-weight:700;text-decoration:none;flex-shrink:0">↗</a>
       </div>`;
     });
   });
@@ -2289,7 +2717,7 @@ function renderShop(){
       const k=staplesKey+'_'+i;const tk=tx[k]||false;
       const name=item.item||item.name||'';const qty=item.qty||item.quantity||'';
       html+=`<div style="display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:.5px solid rgba(0,0,0,.06)">
-        <div class="shcb${tk?' on':''}" onclick="togShopRaw('${encodeURIComponent(staplesKey)}','${i}');event.stopPropagation()" style="background:${tk?'var(--a)':'transparent'};border-color:var(--a)">✓</div>
+        <div class="shcb${tk?' on':''}" onclick="togShopRaw(event,'${encodeURIComponent(staplesKey)}','${i}')" style="background:${tk?'var(--a)':'transparent'};border-color:var(--a)">✓</div>
         <span style="flex:1;font-size:14px;color:var(--ad)">${name}</span>
         <span style="font-size:12px;color:var(--a)">${qty}</span>
       </div>`;
@@ -2369,13 +2797,13 @@ function addTickedToPantry(){
     toast('All ticked items already in pantry','warn');
   }
 }
-function togShop(k){
-  event.stopPropagation();
+function togShop(e,k){
+  e&&e.stopPropagation();
   const wo=S.mealWeek||0;const tx=getShopTx(wo);
   tx[k]=!tx[k];setShopTx(wo,tx);renderShop();
 }
-function togShopRaw(encodedCat,i){
-  event.stopPropagation();
+function togShopRaw(e,encodedCat,i){
+  e&&e.stopPropagation();
   const wo=S.mealWeek||0;const tx=getShopTx(wo);
   const k=decodeURIComponent(encodedCat)+'_'+i;
   tx[k]=!tx[k];setShopTx(wo,tx);renderShop();
@@ -2388,7 +2816,7 @@ function checkBadges(){
   const tw=totalWk();const ph=getPhase();const cur=getCurW();const ss=S.stretchSessions;
   if(tw>=1)award('first');if(tw>=5)award('w5');if(tw>=25)award('w25');if(tw>=50)award('w50');if(tw>=100)award('w100');
   if(ph>=2)award('ph2');if(ph>=3)award('ph3');if(ph>=4)award('ph4');if(ph>=5)award('ph5');if(ph>=6)award('ph6');
-  const lost=98-cur;if(lost>=5)award('kg5');if(lost>=10)award('kg10');if(lost>=20)award('kg20');if(cur<=70)award('goal');
+  const lost=93.7-cur;if(lost>=5)award('kg5');if(lost>=10)award('kg10');if(lost>=20)award('kg20');if(cur<=70)award('goal');
   if(ss>=1)award('split1');if(ss>=8)award('backbend1');
   const lvlCheck=STRETCH_GOALS.some(g=>{const lvl=g.levels.findIndex(l=>ss<l.sessions);return lvl>=3||lvl===-1;});if(lvlCheck)award('flex_adv');
   if(ss>=10)award('st10');
@@ -2607,7 +3035,7 @@ renderToday();checkBadges();
 /* ── Service Worker: auto-update on new deploy ── */
 if('serviceWorker' in navigator){
   /* Inline service worker as a blob so no extra file is needed */
-  const SW_VERSION='1.3.0'; /* Keep in sync with APP_VERSION above */
+  const SW_VERSION='1.0.0'; /* Keep in sync with APP_VERSION above */
   const swCode=`
 const CACHE='fittrack-v${SW_VERSION}';
 self.addEventListener('install',e=>{
