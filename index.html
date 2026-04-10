@@ -316,7 +316,7 @@ function getSVG(name){
 }
 
 /* ═══ APP VERSION ═══ */
-const APP_VERSION='1.5.0';
+const APP_VERSION='1.7.0';
 const APP_DEPLOYED='10 Apr 2025'; /* Update this string on each deploy */
 
 /* Starting date — the day the programme begins */
@@ -2596,7 +2596,11 @@ Return ONLY valid JSON (no markdown). MUST contain "Staples to check" as final k
   }catch(e){setShopList(wo,fbShop());}
   renderShop();if(btn)btn.disabled=false;
 }
-function ocadoUrl(n){return'https://www.ocado.com/search?entry='+encodeURIComponent(n);}
+function ocadoUrl(n){
+  /* Ocado search — strip quantities/units to get a clean product search term */
+  const clean=n.replace(/\d+\s*(g|kg|ml|L|tsp|tbsp|x|pack|tin|can|bunch|slice)\b/gi,'').replace(/[()×]/g,'').trim();
+  return'https://www.ocado.com/search?entry='+encodeURIComponent(clean||n);
+}
 
 /* ── Client-side pantry subtraction ──
    Removes or adjusts shopping list items that are already in the pantry.
@@ -2698,7 +2702,7 @@ function renderShop(){
         <div class="shcb${tk?' on':''}" onclick="togShop(event,'${k}')">✓</div>
         <span class="shn" style="flex:1">${name}</span>
         <span class="shq">${qty}</span>
-        <a href="${ocadoUrl(name)}" target="_blank" onclick="return false" style="display:flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:8px;background:var(--bl);color:var(--bd);font-size:13px;font-weight:700;text-decoration:none;flex-shrink:0">↗</a>
+        <a href="${ocadoUrl(name)}" target="_blank" style="display:flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:8px;background:var(--bl);color:var(--bd);font-size:13px;font-weight:700;text-decoration:none;flex-shrink:0">↗</a>
       </div>`;
     });
   });
