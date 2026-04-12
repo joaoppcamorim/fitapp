@@ -316,8 +316,8 @@ function getSVG(name){
 }
 
 /* ═══ APP VERSION ═══ */
-const APP_VERSION='1.7.0';
-const APP_DEPLOYED='10 Apr 2025'; /* Update this string on each deploy */
+const APP_VERSION='1.8.0';
+const APP_DEPLOYED='12 Apr 2025'; /* Update this string on each deploy */
 
 /* Starting date — the day the programme begins */
 const START_DATE_STR='2025-04-11'; /* tomorrow */
@@ -1379,7 +1379,7 @@ function renderMealContent(){
     const safeD=(m.detail||'').slice(0,80).replace(/\\/g,'\\\\').replace(/`/g,'\\`').replace(/\$/g,'\\$');
     const heartBtn=`<button onclick="tapHeart(\`${safeN}\`,\`${safeD}\`)" style="background:none;border:none;font-size:18px;cursor:pointer;padding:0;line-height:1;flex-shrink:0" title="${fav?'Remove from favourites':'Save as favourite'}">${fav?'❤️':'🤍'}</button>`;
     const cookedBtn=cooked
-      ?`<span style="font-size:11px;font-weight:600;color:var(--g);padding:3px 8px;background:var(--gl);border-radius:6px;flex-shrink:0">✓ Cooked</span>`
+      ?`<button onclick="unmarkMealCooked('${DAY_NAMES[S.cDay]}',${mi})" style="background:var(--gl);color:var(--gd);border:none;border-radius:6px;padding:3px 8px;font-size:11px;font-weight:600;cursor:pointer;flex-shrink:0">✓ Cooked</button>`
       :`<button onclick="markMealCooked('${DAY_NAMES[S.cDay]}',${mi})" style="background:none;border:.5px solid var(--br);border-radius:6px;padding:3px 8px;font-size:11px;color:var(--mt);cursor:pointer;flex-shrink:0">Mark cooked</button>`;
     html+=`<div class="mlc" id="mlc-${mi}" style="${cooked?'opacity:.65':''}">
       <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:6px;margin-bottom:2px">
@@ -1832,6 +1832,28 @@ function markMealCooked(day,mealIdx){
   setMealPlan(wo,plan);
   toast(`✓ ${meal.name} cooked — pantry & macros updated`);
   renderMealContent();
+}
+
+function unmarkMealCooked(day,mealIdx){
+  const wo=S.mealWeek||0;const plan=getMealPlan(wo);if(!plan)return;
+  const dp=plan[day];if(!dp)return;
+  const meals=dp.training||dp.rest||[];const meal=meals[mealIdx];if(!meal)return;
+  meal.cooked=false;
+  /* Reverse macro deduction for today */
+  const todayName=DAY_NAMES[new Date().getDay()];
+  if(day===todayName){
+    const m=getTodayMacros();
+    m.cal=Math.max(0,m.cal-(meal.calories||0));
+    m.protein=Math.max(0,m.protein-(meal.protein||0));
+    m.carbs=Math.max(0,m.carbs-(meal.carbs||0));
+    m.fat=Math.max(0,m.fat-(meal.fat||0));
+    m.meals=m.meals.filter(n=>n!==meal.name);
+    setTodayMacros(m);
+  }
+  setMealPlan(wo,plan);
+  toast(`↩ ${meal.name} unmarked`);
+  renderMealContent();
+  renderMacroTracker();
 }
 
 function renderPantryView(){
