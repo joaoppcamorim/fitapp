@@ -316,11 +316,11 @@ function getSVG(name){
 }
 
 /* ═══ APP VERSION ═══ */
-const APP_VERSION='1.8.0';
-const APP_DEPLOYED='12 Apr 2025'; /* Update this string on each deploy */
+const APP_VERSION='1.9.0';
+const APP_DEPLOYED='9 May 2026'; /* Update this string on each deploy */
 
 /* Starting date — the day the programme begins */
-const START_DATE_STR='2025-04-11'; /* tomorrow */
+const START_DATE_STR='2025-05-09'; /* Saturday 9 May — programme start date */
 function getStartDate(){return new Date(START_DATE_STR);}
 function daysSinceStart(){return Math.max(0,Math.floor((Date.now()-getStartDate().getTime())/86400000));}
 function weeksSinceStart(){return Math.floor(daysSinceStart()/7);}
@@ -2046,8 +2046,15 @@ async function genMeals(){
   ensureApiKey(async()=>{
   const wo=S.mealWeek||0;
   const ph=getPhase();const p=PH[ph];const cur=getCurW();
+
+  /* Ensure we're on the meals sub-view so mcont and genbtn are in the DOM */
+  if(S_mealView!=='meals'){setMealView('meals');}
+
   const btn=document.getElementById('genbtn');
-  btn.disabled=true;
+  if(btn){btn.disabled=true;btn.textContent='Generating…';}
+
+  const mcontEl=document.getElementById('mcont');
+  if(mcontEl)mcontEl.innerHTML=`<div class="ail"><div class="spin"></div><div class="aim">Step 1/2 — Building meal plan from pantry…</div></div>`;
 
   /* ── Pantry snapshot ── */
   const _pw=getPantry(wo);
@@ -2166,7 +2173,6 @@ ${freshNonStaple.map(fmtItem).map(x=>`  * ${x}`).join('\n')}
   /* ══════════════════════════════════════════════════════════════
      PHASE 1 — Plan only (no steps). Small response, fits easily.
      ══════════════════════════════════════════════════════════════ */
-  document.getElementById('mcont').innerHTML=`<div class="ail"><div class="spin"></div><div class="aim">Step 1/2 — Building meal plan from pantry…</div></div>`;
 
   const planPrompt=`You are a professional chef and sports nutritionist (NYT Cooking / Molly Baz / Alison Roman style). Create a 7-day meal plan:
 - 37yo male, 183cm, ${cur.toFixed(1)}kg, started 93.7kg, goal 70kg
@@ -2197,18 +2203,18 @@ Return ONLY valid JSON — NO steps[] yet, those come in a second pass:
 
   let newPlan;
   try{
-    btn.textContent='Generating plan…';
+    if(btn)btn.textContent='Generating plan…';
     const raw1=await apiCall([{role:'user',content:planPrompt}],6000);
     try{newPlan=JSON.parse(raw1.replace(/```json\n?|```/g,'').trim());}
     catch(e){
       console.error('Phase 1 parse error. Response length:',raw1.length,'First 300:',raw1.slice(0,300));
       toast('Could not parse meal plan — try regenerating','warn');
-      btn.disabled=false;btn.textContent='✦ Generate this week\'s meal plan';return;
+      if(btn){btn.disabled=false;btn.textContent='✦ Generate this week\'s meal plan';}return;
     }
   }catch(e){
-    if(e.message==='NO_KEY'){btn.disabled=false;btn.textContent='✦ Generate this week\'s meal plan';return;}
+    if(e.message==='NO_KEY'){if(btn){btn.disabled=false;btn.textContent='✦ Generate this week\'s meal plan';}return;}
     setMealPlan(wo,fbMeals(ph));toast('Using built-in meal plan','warn');
-    renderMeals();btn.disabled=false;btn.textContent='✦ Generate this week\'s meal plan';return;
+    renderMeals();if(btn){btn.disabled=false;btn.textContent='✦ Generate this week\'s meal plan';}return;
   }
 
   /* Save plan immediately so user can see it while recipes generate */
@@ -2222,8 +2228,8 @@ Return ONLY valid JSON — NO steps[] yet, those come in a second pass:
   /* ══════════════════════════════════════════════════════════════
      PHASE 2 — Generate steps for every meal in one batch call
      ══════════════════════════════════════════════════════════════ */
-  document.getElementById('mcont').innerHTML=`<div class="ail"><div class="spin"></div><div class="aim">Step 2/2 — Writing step-by-step recipes…</div></div>`;
-  btn.textContent='Adding recipes…';
+  if(mcontEl)mcontEl.innerHTML=`<div class="ail"><div class="spin"></div><div class="aim">Step 2/2 — Writing step-by-step recipes…</div></div>`;
+  if(btn)btn.textContent='Adding recipes…';
 
   try{
     /* Collect all meals needing steps */
@@ -2281,7 +2287,7 @@ Return ONLY a JSON array in the same order as the meals above:
     toast(`✦ Plan ready! Tap "+ Add recipe" to add step-by-step recipes.`);
   }
 
-  btn.disabled=false;btn.textContent='✦ Generate this week\'s meal plan';
+  if(btn){btn.disabled=false;btn.textContent='✦ Generate this week\'s meal plan';}
   });
 }
 
@@ -2323,7 +2329,7 @@ async function genRecipes(){
   ensureApiKey(async()=>{
   const wo=S.mealWeek||0;const plan=getMealPlan(wo);
   if(!plan){toast('Generate a meal plan first','warn');return;}
-  const btn=document.getElementById('recipebtn');btn.disabled=true;btn.textContent='Adding recipes…';
+  const btn=document.getElementById('recipebtn');btn.disabled=true;if(btn)btn.textContent='Adding recipes…';
   const toEnrich=[];
   DAY_NAMES.forEach(day=>{const dp=plan[day];if(dp)(dp.training||dp.rest||[]).forEach((m,i)=>{if(!m.steps||!m.steps.length)toEnrich.push({day,idx:i,name:m.name,detail:m.detail});});});
   const unique=toEnrich.filter((v,i,a)=>a.findIndex(x=>x.day===v.day&&x.idx===v.idx)===i);
